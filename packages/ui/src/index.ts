@@ -4,3 +4,5 @@ export { createDraw } from './draw.js';
 export type { Draw } from './draw.js';
 export { fg, bg, reset, bold, dim, italic, underline } from './color.js';
 export type { RGB } from './color.js';
+export { showDialog } from './dialog.js';
+export type { DialogOptions, DialogButton, DialogResult } from './dialog.js';
