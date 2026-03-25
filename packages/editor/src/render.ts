@@ -1,8 +1,11 @@
-import type { Screen, Draw } from '@jano/ui';
+import type { Screen, Draw, RGB } from '@jano/ui';
 import type { EditorState } from './editor.js';
 import type { CursorState } from './cursor.js';
 import type { SelectionState } from './selection.js';
+import type { LanguagePlugin } from './plugins/types.js';
 import { getRange, isSelected } from './selection.js';
+import { tokenizeLine } from './highlight.js';
+import { tokenColors } from './plugins/types.js';
 
 const shortcuts = [
   ['^Q', 'Exit'],
@@ -32,6 +35,7 @@ export function render(
   editor: EditorState,
   cursor: CursorState,
   sel: SelectionState,
+  plugin: LanguagePlugin | null,
 ) {
   draw.clear();
 
@@ -44,7 +48,8 @@ export function render(
   draw.rect(0, 0, w, h - 1, { fg: [80, 80, 80], border: 'round' });
 
   // title bar
-  const title = ` jano — ${editor.filePath} `;
+  const langName = plugin ? ` [${plugin.name}]` : '';
+  const title = ` jano — ${editor.filePath}${langName} `;
   const titleX = Math.floor((w - title.length) / 2);
   draw.text(titleX, 0, title, { fg: [255, 255, 100] });
 
@@ -57,16 +62,32 @@ export function render(
     const lineNum = String(lineIdx + 1).padStart(gw - 1, ' ') + ' ';
     draw.text(1, contentTop + y, lineNum, { fg: [100, 100, 100] });
 
-    // line content
+    // tokenize line for highlighting
     const line = editor.lines[lineIdx];
+    const tokens = tokenizeLine(line, plugin);
+
+    // build color map for this line
+    const colorMap: (RGB | null)[] = new Array(line.length).fill(null);
+    for (const token of tokens) {
+      const color = tokenColors[token.type];
+      if (color) {
+        for (let i = token.start; i < token.end && i < line.length; i++) {
+          colorMap[i] = color;
+        }
+      }
+    }
+
+    // draw characters
     for (let col = 0; col < viewW; col++) {
       const charIdx = col + cursor.scrollX;
       if (charIdx >= line.length) break;
       const ch = line[charIdx];
+
       if (isSelected(selRange, lineIdx, charIdx)) {
         draw.char(1 + gw + col, contentTop + y, ch, { fg: [255, 255, 255], bg: [60, 100, 180] });
       } else {
-        draw.char(1 + gw + col, contentTop + y, ch);
+        const fg = colorMap[charIdx] ?? [171, 178, 191]; // default text color
+        draw.char(1 + gw + col, contentTop + y, ch, { fg });
       }
     }
   }

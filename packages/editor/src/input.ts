@@ -4,11 +4,23 @@ import type { CursorState } from './cursor.js';
 import type { SelectionState } from './selection.js';
 import type { KeyEvent } from './keypress.js';
 import type { UndoManager } from './undo.js';
+import type { LanguagePlugin } from './plugins/types.js';
 import { clamp, moveLeft, moveRight } from './cursor.js';
 import * as sel from './selection.js';
 import * as ed from './editor.js';
+import { buildContext } from './plugins/context.js';
+import { applyEditResult } from './plugins/apply.js';
 
 export type HandleKeyResult = 'continue' | 'exit' | 'history';
+
+function getViewport(cursor: CursorState, screen: Screen) {
+  return {
+    firstLine: cursor.scrollY,
+    lastLine: cursor.scrollY + screen.height - 5,
+    width: screen.width,
+    height: screen.height,
+  };
+}
 
 export function handleKey(
   key: KeyEvent,
@@ -17,6 +29,7 @@ export function handleKey(
   selection: SelectionState,
   screen: Screen,
   undo: UndoManager,
+  plugin: LanguagePlugin | null,
 ): HandleKeyResult {
   // shift+arrow: start or extend selection
   if (key.shift && ['up', 'down', 'left', 'right', 'home', 'end'].includes(key.name)) {
@@ -128,9 +141,18 @@ export function handleKey(
     case 'enter': {
       undo.snapshot('enter', { x: cursor.x, y: cursor.y }, editor.lines);
       if (selRange) sel.deleteRange(selRange, editor, cursor, selection);
+
       const pos = ed.insertNewline(editor, cursor.x, cursor.y);
       cursor.x = pos.x;
       cursor.y = pos.y;
+
+      // ask plugin
+      if (plugin?.onNewLine) {
+        const ctx = buildContext(editor, cursor, selection, 'newline', getViewport(cursor, screen));
+        const result = plugin.onNewLine(ctx);
+        if (result) applyEditResult(result, editor, cursor, selection);
+      }
+
       undo.commit({ x: cursor.x, y: cursor.y }, editor.lines);
       break;
     }
@@ -172,6 +194,14 @@ export function handleKey(
         undo.snapshot('type', { x: cursor.x, y: cursor.y }, editor.lines);
         if (selRange) sel.deleteRange(selRange, editor, cursor, selection);
         cursor.x = ed.insertChar(editor, cursor.x, cursor.y, ch);
+
+        // ask plugin
+        if (plugin?.onCharTyped) {
+          const ctx = buildContext(editor, cursor, selection, 'char', getViewport(cursor, screen), { char: ch });
+          const result = plugin.onCharTyped(ctx);
+          if (result) applyEditResult(result, editor, cursor, selection);
+        }
+
         undo.commit({ x: cursor.x, y: cursor.y }, editor.lines);
       }
       break;

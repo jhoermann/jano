@@ -7,6 +7,7 @@ import { createUndoManager } from './undo.js';
 import { parseKey } from './keypress.js';
 import { handleKey } from './input.js';
 import { render, getViewDimensions } from './render.js';
+import { detectLanguage } from './plugins/index.js';
 
 const filePath = process.argv[2];
 
@@ -21,13 +22,14 @@ const editor = createEditor(filePath);
 const cursor = createCursor();
 const selection = createSelection();
 const undo = createUndoManager();
+const plugin = detectLanguage(filePath);
 
 let dialogOpen = false;
 
 function update() {
   const { viewW, viewH } = getViewDimensions(screen, editor.lines.length);
   ensureVisible(cursor, viewW, viewH);
-  render(screen, draw, editor, cursor, selection);
+  render(screen, draw, editor, cursor, selection, plugin);
 }
 
 async function confirmExit() {
@@ -137,7 +139,7 @@ process.stdin.on('data', (data) => {
   if (dialogOpen) return;
 
   const key = parseKey(data);
-  const result = handleKey(key, editor, cursor, selection, screen, undo);
+  const result = handleKey(key, editor, cursor, selection, screen, undo, plugin);
 
   switch (result) {
     case 'exit':
