@@ -71,10 +71,16 @@ export function parseKey(data: Buffer): KeyEvent {
       case '1;2D': key.name = 'left'; key.shift = true; break;
       case '1;2H': key.name = 'home'; key.shift = true; break;
       case '1;2F': key.name = 'end'; key.shift = true; break;
+      case '1;3A': key.name = 'up'; key.alt = true; break;
+      case '1;3B': key.name = 'down'; key.alt = true; break;
       case '1;5A': key.name = 'up'; key.ctrl = true; break;
       case '1;5B': key.name = 'down'; key.ctrl = true; break;
       case '1;5C': key.name = 'right'; key.ctrl = true; break;
       case '1;5D': key.name = 'left'; key.ctrl = true; break;
+      case '1;6A': key.name = 'up'; key.ctrl = true; key.shift = true; break;
+      case '1;6B': key.name = 'down'; key.ctrl = true; key.shift = true; break;
+      case '1;6C': key.name = 'right'; key.ctrl = true; key.shift = true; break;
+      case '1;6D': key.name = 'left'; key.ctrl = true; key.shift = true; break;
       default: key.name = 'unknown'; break;
     }
     return key;

@@ -31,6 +31,18 @@ export function handleKey(
   undo: UndoManager,
   plugin: LanguagePlugin | null,
 ): HandleKeyResult {
+  // shift+ctrl+arrow: select word by word
+  if (key.shift && key.ctrl && (key.name === 'left' || key.name === 'right')) {
+    sel.startOrExtend(selection, cursor);
+
+    if (key.name === 'left') moveWordLeft(cursor, editor.lines);
+    if (key.name === 'right') moveWordRight(cursor, editor.lines);
+
+    clamp(cursor, editor.lines);
+    sel.collapseIfEmpty(selection, cursor);
+    return 'continue';
+  }
+
   // shift+arrow: start or extend selection
   if (key.shift && ['up', 'down', 'left', 'right', 'home', 'end'].includes(key.name)) {
     sel.startOrExtend(selection, cursor);
@@ -46,6 +58,31 @@ export function handleKey(
 
     clamp(cursor, editor.lines);
     sel.collapseIfEmpty(selection, cursor);
+    return 'continue';
+  }
+
+  // alt+up/down: move lines
+  if (key.alt && (key.name === 'up' || key.name === 'down')) {
+    const selRange = sel.getRange(selection, cursor);
+    const startLine = selRange ? selRange.start.y : cursor.y;
+    const endLine = selRange ? selRange.end.y : cursor.y;
+
+    undo.snapshot('move-line', { x: cursor.x, y: cursor.y }, editor.lines);
+
+    if (key.name === 'up') {
+      if (ed.moveLinesUp(editor, startLine, endLine)) {
+        cursor.y--;
+        if (selection.anchor) selection.anchor = { x: selection.anchor.x, y: selection.anchor.y - 1 };
+      }
+    } else {
+      if (ed.moveLinesDown(editor, startLine, endLine)) {
+        cursor.y++;
+        if (selection.anchor) selection.anchor = { x: selection.anchor.x, y: selection.anchor.y + 1 };
+      }
+    }
+
+    undo.commit({ x: cursor.x, y: cursor.y }, editor.lines);
+    clamp(cursor, editor.lines);
     return 'continue';
   }
 

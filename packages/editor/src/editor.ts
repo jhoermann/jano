@@ -108,6 +108,22 @@ export function insertTab(state: EditorState, x: number, y: number): number {
   return x + 2;
 }
 
+export function moveLinesUp(state: EditorState, startLine: number, endLine: number): boolean {
+  if (startLine <= 0) return false;
+  const moved = state.lines.splice(startLine, endLine - startLine + 1);
+  state.lines.splice(startLine - 1, 0, ...moved);
+  state.dirty = true;
+  return true;
+}
+
+export function moveLinesDown(state: EditorState, startLine: number, endLine: number): boolean {
+  if (endLine >= state.lines.length - 1) return false;
+  const moved = state.lines.splice(startLine, endLine - startLine + 1);
+  state.lines.splice(startLine + 1, 0, ...moved);
+  state.dirty = true;
+  return true;
+}
+
 export function cutLine(state: EditorState, y: number): { clipText: string; newY: number } {
   const clipText = state.lines[y] + '\n';
   state.lines.splice(y, 1);
