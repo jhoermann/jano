@@ -1,11 +1,11 @@
 import type { Screen, Draw, RGB } from '@jano/ui';
-import type { EditorState } from './editor.js';
-import type { CursorState } from './cursor.js';
-import type { SelectionState } from './selection.js';
-import type { LanguagePlugin } from './plugins/types.js';
-import { getRange, isSelected } from './selection.js';
-import { tokenizeLine } from './highlight.js';
-import { tokenColors } from './plugins/types.js';
+import type { EditorState } from './editor.ts';
+import type { CursorState } from './cursor.ts';
+import type { SelectionState } from './selection.ts';
+import type { LanguagePlugin } from './plugins/types.ts';
+import { getRange, isSelected } from './selection.ts';
+import { tokenizeLine } from './highlight.ts';
+import { tokenColors } from './plugins/types.ts';
 
 const shortcuts = [
   ['^Q', 'Exit'],

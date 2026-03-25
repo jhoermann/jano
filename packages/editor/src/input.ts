@@ -1,15 +1,15 @@
 import type { Screen } from '@jano/ui';
-import type { EditorState } from './editor.js';
-import type { CursorState } from './cursor.js';
-import type { SelectionState } from './selection.js';
-import type { KeyEvent } from './keypress.js';
-import type { UndoManager } from './undo.js';
-import type { LanguagePlugin } from './plugins/types.js';
-import { clamp, moveLeft, moveRight } from './cursor.js';
-import * as sel from './selection.js';
-import * as ed from './editor.js';
-import { buildContext } from './plugins/context.js';
-import { applyEditResult } from './plugins/apply.js';
+import type { EditorState } from './editor.ts';
+import type { CursorState } from './cursor.ts';
+import type { SelectionState } from './selection.ts';
+import type { KeyEvent } from './keypress.ts';
+import type { UndoManager } from './undo.ts';
+import type { LanguagePlugin } from './plugins/types.ts';
+import { clamp, moveLeft, moveRight } from './cursor.ts';
+import * as sel from './selection.ts';
+import * as ed from './editor.ts';
+import { buildContext } from './plugins/context.ts';
+import { applyEditResult } from './plugins/apply.ts';
 
 export type HandleKeyResult = 'continue' | 'exit' | 'history';
 

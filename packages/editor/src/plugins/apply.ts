@@ -1,7 +1,7 @@
-import type { EditResult } from './types.js';
-import type { EditorState } from '../editor.js';
-import type { CursorState } from '../cursor.js';
-import type { SelectionState } from '../selection.js';
+import type { EditResult } from './types.ts';
+import type { EditorState } from '../editor.ts';
+import type { CursorState } from '../cursor.ts';
+import type { SelectionState } from '../selection.ts';
 
 export function applyEditResult(
   result: EditResult,

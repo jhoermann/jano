@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 import { createScreen, createDraw, showDialog } from '@jano/ui';
-import { createEditor, save } from './editor.js';
-import { createCursor, ensureVisible } from './cursor.js';
-import { createSelection } from './selection.js';
-import { createUndoManager } from './undo.js';
-import { parseKey } from './keypress.js';
-import { handleKey } from './input.js';
-import { render, getViewDimensions } from './render.js';
-import { detectLanguage } from './plugins/index.js';
+import { createEditor, save } from './editor.ts';
+import { createCursor, ensureVisible } from './cursor.ts';
+import { createSelection } from './selection.ts';
+import { createUndoManager } from './undo.ts';
+import { parseKey } from './keypress.ts';
+import { handleKey } from './input.ts';
+import { render, getViewDimensions } from './render.ts';
+import { detectLanguage } from './plugins/index.ts';
 
 const filePath = process.argv[2];
 

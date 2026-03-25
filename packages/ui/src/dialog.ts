@@ -1,6 +1,6 @@
-import type { Screen } from './screen.js';
-import type { Draw } from './draw.js';
-import type { RGB } from './color.js';
+import type { Screen } from './screen.ts';
+import type { Draw } from './draw.ts';
+import type { RGB } from './color.ts';
 
 export interface DialogButton {
   label: string;

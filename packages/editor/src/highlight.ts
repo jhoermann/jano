@@ -1,4 +1,4 @@
-import type { LanguagePlugin, HighlightToken, HighlightPatterns } from './plugins/types.js';
+import type { LanguagePlugin, HighlightToken, HighlightPatterns } from './plugins/types.ts';
 
 export function tokenizeLine(line: string, plugin: LanguagePlugin | null): HighlightToken[] {
   if (!plugin?.highlight) return [];

@@ -1,4 +1,4 @@
-import type { LanguagePlugin, PluginContext, EditResult } from './types.js';
+import type { LanguagePlugin, PluginContext, EditResult } from './types.ts';
 
 const TAB_SIZE = 2;
 

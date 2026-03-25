@@ -1,4 +1,4 @@
-import type { Pos } from './types.js';
+import type { Pos } from './types.ts';
 
 interface LineDiff {
   index: number;

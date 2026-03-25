@@ -1,6 +1,6 @@
-import { fg, bg, reset } from './color.js';
-import type { Screen } from './screen.js';
-import type { RGB } from './color.js';
+import { fg, bg, reset } from './color.ts';
+import type { Screen } from './screen.ts';
+import type { RGB } from './color.ts';
 
 type BorderStyle = 'single' | 'double' | 'round';
 

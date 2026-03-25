@@ -1,6 +1,6 @@
-import type { Pos, SelectionRange } from './types.js';
-import type { CursorState } from './cursor.js';
-import type { EditorState } from './editor.js';
+import type { Pos, SelectionRange } from './types.ts';
+import type { CursorState } from './cursor.ts';
+import type { EditorState } from './editor.ts';
 
 export interface SelectionState {
   anchor: Pos | null;
