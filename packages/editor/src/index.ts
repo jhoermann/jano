@@ -7,7 +7,8 @@ import { createUndoManager } from './undo.ts';
 import { parseKey } from './keypress.ts';
 import { handleKey } from './input.ts';
 import { render, getViewDimensions } from './render.ts';
-import { detectLanguage } from './plugins/index.ts';
+import { initPlugins, detectLanguage } from './plugins/index.ts';
+import type { LanguagePlugin } from './plugins/types.ts';
 
 const filePath = process.argv[2];
 
@@ -22,8 +23,8 @@ const editor = createEditor(filePath);
 const cursor = createCursor();
 const selection = createSelection();
 const undo = createUndoManager();
-const plugin = detectLanguage(filePath);
 
+let plugin: LanguagePlugin | null = null;
 let dialogOpen = false;
 
 function update() {
@@ -132,8 +133,30 @@ async function showHistory() {
   update();
 }
 
-screen.enter();
-process.stdin.setRawMode(true);
+// init
+async function start() {
+  const loadResult = await initPlugins();
+
+  // show plugin errors if any
+  if (loadResult.errors.length > 0) {
+    for (const err of loadResult.errors) {
+      process.stderr.write(`Plugin error (${err.dir}): ${err.error}\n`);
+    }
+  }
+  if (loadResult.conflicts.length > 0) {
+    for (const conflict of loadResult.conflicts) {
+      process.stderr.write(`Plugin conflict: ${conflict}\n`);
+    }
+  }
+
+  plugin = detectLanguage(filePath);
+
+  screen.enter();
+  process.stdin.setRawMode(true);
+  update();
+}
+
+start();
 
 process.stdin.on('data', (data) => {
   if (dialogOpen) return;
@@ -154,5 +177,3 @@ process.stdin.on('data', (data) => {
 });
 
 process.stdout.on('resize', update);
-
-update();
