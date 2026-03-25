@@ -62,9 +62,14 @@ export function showDialog(
       return h;
     }
 
+    let backgroundDrawn = false;
+
     function renderDialog() {
-      // re-draw background first
-      renderBackground();
+      // only draw background once to avoid flicker
+      if (!backgroundDrawn) {
+        renderBackground();
+        backgroundDrawn = true;
+      }
 
       const w = dialogW;
       const h = calcHeight();
