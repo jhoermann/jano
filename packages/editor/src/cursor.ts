@@ -44,6 +44,58 @@ export function moveRight(cursor: CursorState, lines: string[]) {
   }
 }
 
+// find previous word boundary (like VS Code ctrl+left)
+export function wordBoundaryLeft(line: string, col: number): number {
+  if (col <= 0) return 0;
+  let i = col - 1;
+  // skip whitespace
+  while (i > 0 && /\s/.test(line[i])) i--;
+  // if on punctuation, skip punctuation
+  if (i >= 0 && /[^\w\s]/.test(line[i])) {
+    while (i > 0 && /[^\w\s]/.test(line[i - 1])) i--;
+    return i;
+  }
+  // skip word chars
+  while (i > 0 && /\w/.test(line[i - 1])) i--;
+  return i;
+}
+
+// find next word boundary (like VS Code ctrl+right)
+export function wordBoundaryRight(line: string, col: number): number {
+  const len = line.length;
+  if (col >= len) return len;
+  let i = col;
+  // if on word char, skip word
+  if (/\w/.test(line[i])) {
+    while (i < len && /\w/.test(line[i])) i++;
+  }
+  // if on punctuation, skip punctuation
+  else if (/[^\w\s]/.test(line[i])) {
+    while (i < len && /[^\w\s]/.test(line[i])) i++;
+  }
+  // skip trailing whitespace
+  while (i < len && /\s/.test(line[i])) i++;
+  return i;
+}
+
+export function moveWordLeft(cursor: CursorState, lines: string[]) {
+  if (cursor.x > 0) {
+    cursor.x = wordBoundaryLeft(lines[cursor.y], cursor.x);
+  } else if (cursor.y > 0) {
+    cursor.y--;
+    cursor.x = lines[cursor.y].length;
+  }
+}
+
+export function moveWordRight(cursor: CursorState, lines: string[]) {
+  if (cursor.x < lines[cursor.y].length) {
+    cursor.x = wordBoundaryRight(lines[cursor.y], cursor.x);
+  } else if (cursor.y < lines.length - 1) {
+    cursor.y++;
+    cursor.x = 0;
+  }
+}
+
 export function pos(cursor: CursorState): Pos {
   return { x: cursor.x, y: cursor.y };
 }

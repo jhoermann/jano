@@ -62,6 +62,34 @@ export function deleteCharBack(state: EditorState, x: number, y: number): { x: n
   return { x, y };
 }
 
+export function deleteWordBack(state: EditorState, x: number, y: number, boundaryX: number): { x: number; y: number } {
+  if (x > 0) {
+    const line = state.lines[y];
+    state.lines[y] = line.substring(0, boundaryX) + line.substring(x);
+    state.dirty = true;
+    return { x: boundaryX, y };
+  }
+  if (y > 0) {
+    const newX = state.lines[y - 1].length;
+    state.lines[y - 1] += state.lines[y];
+    state.lines.splice(y, 1);
+    state.dirty = true;
+    return { x: newX, y: y - 1 };
+  }
+  return { x, y };
+}
+
+export function deleteWordForward(state: EditorState, x: number, y: number, boundaryX: number) {
+  if (x < state.lines[y].length) {
+    const line = state.lines[y];
+    state.lines[y] = line.substring(0, x) + line.substring(boundaryX);
+  } else if (y < state.lines.length - 1) {
+    state.lines[y] += state.lines[y + 1];
+    state.lines.splice(y + 1, 1);
+  }
+  state.dirty = true;
+}
+
 export function deleteCharForward(state: EditorState, x: number, y: number) {
   if (x < state.lines[y].length) {
     const line = state.lines[y];

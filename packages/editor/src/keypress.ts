@@ -19,6 +19,13 @@ export function parseKey(data: Buffer): KeyEvent {
     return key;
   }
 
+  // ctrl+backspace (0x08)
+  if (data.length === 1 && data[0] === 0x08) {
+    key.name = 'backspace';
+    key.ctrl = true;
+    return key;
+  }
+
   // ctrl+letter
   if (data.length === 1 && data[0] < 27) {
     key.ctrl = true;
@@ -57,6 +64,7 @@ export function parseKey(data: Buffer): KeyEvent {
       case '5~': key.name = 'pageup'; break;
       case '6~': key.name = 'pagedown'; break;
       case '3~': key.name = 'delete'; break;
+      case '3;5~': key.name = 'delete'; key.ctrl = true; break;
       case '1;2A': key.name = 'up'; key.shift = true; break;
       case '1;2B': key.name = 'down'; key.shift = true; break;
       case '1;2C': key.name = 'right'; key.shift = true; break;

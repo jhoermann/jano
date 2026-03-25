@@ -5,7 +5,7 @@ import type { SelectionState } from './selection.ts';
 import type { KeyEvent } from './keypress.ts';
 import type { UndoManager } from './undo.ts';
 import type { LanguagePlugin } from './plugins/types.ts';
-import { clamp, moveLeft, moveRight } from './cursor.ts';
+import { clamp, moveLeft, moveRight, moveWordLeft, moveWordRight, wordBoundaryLeft, wordBoundaryRight } from './cursor.ts';
 import * as sel from './selection.ts';
 import * as ed from './editor.ts';
 import { buildContext } from './plugins/context.ts';
@@ -72,6 +72,42 @@ export function handleKey(
       case 's':
         ed.save(editor);
         break;
+
+      case 'left':
+        moveWordLeft(cursor, editor.lines);
+        break;
+
+      case 'right':
+        moveWordRight(cursor, editor.lines);
+        break;
+
+      case 'backspace': {
+        undo.snapshot('delete-word', { x: cursor.x, y: cursor.y }, editor.lines);
+        const selR = sel.getRange(selection, cursor);
+        if (selR) {
+          sel.deleteRange(selR, editor, cursor, selection);
+        } else {
+          const boundary = wordBoundaryLeft(editor.lines[cursor.y], cursor.x);
+          const pos = ed.deleteWordBack(editor, cursor.x, cursor.y, boundary);
+          cursor.x = pos.x;
+          cursor.y = pos.y;
+        }
+        undo.commit({ x: cursor.x, y: cursor.y }, editor.lines);
+        break;
+      }
+
+      case 'delete': {
+        undo.snapshot('delete-word', { x: cursor.x, y: cursor.y }, editor.lines);
+        const selR2 = sel.getRange(selection, cursor);
+        if (selR2) {
+          sel.deleteRange(selR2, editor, cursor, selection);
+        } else {
+          const boundary = wordBoundaryRight(editor.lines[cursor.y], cursor.x);
+          ed.deleteWordForward(editor, cursor.x, cursor.y, boundary);
+        }
+        undo.commit({ x: cursor.x, y: cursor.y }, editor.lines);
+        break;
+      }
 
       case 'z': {
         const result = undo.undo(editor.lines, cursor);
