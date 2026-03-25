@@ -6,7 +6,7 @@ import type { LoadedPlugin, LoadResult } from './loader.ts';
 export type { LanguagePlugin, HighlightToken } from './types.ts';
 export { tokenColors } from './types.ts';
 export type { LoadedPlugin, LoadResult } from './loader.ts';
-export { loadConfig, saveConfig, setPluginEnabled, ensureJanoDir } from './config.ts';
+export { loadConfig, saveConfig, setPluginEnabled, ensureDirs, getPaths } from './config.ts';
 export { installPlugin, checkUpdates, searchPlugins } from './registry.ts';
 
 let loadedPlugins: LoadedPlugin[] = [];

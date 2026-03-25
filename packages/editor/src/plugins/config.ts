@@ -1,33 +1,82 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { homedir } from 'node:os';
+import { homedir, platform } from 'node:os';
 
 export interface JanoConfig {
   plugins: Record<string, { enabled: boolean }>;
 }
 
-const JANO_DIR = join(homedir(), '.jano');
-const CONFIG_PATH = join(JANO_DIR, 'config.json');
-const PLUGINS_DIR = join(JANO_DIR, 'plugins');
+export interface JanoPaths {
+  config: string;
+  data: string;
+  plugins: string;
+  cache: string;
+}
 
-export function getJanoDir(): string { return JANO_DIR; }
-export function getPluginsDir(): string { return PLUGINS_DIR; }
-export function getConfigPath(): string { return CONFIG_PATH; }
+function resolvePaths(): JanoPaths {
+  const home = homedir();
+  const os = platform();
 
-export function ensureJanoDir() {
-  if (!existsSync(JANO_DIR)) mkdirSync(JANO_DIR, { recursive: true });
-  if (!existsSync(PLUGINS_DIR)) mkdirSync(PLUGINS_DIR, { recursive: true });
+  if (os === 'win32') {
+    const appData = process.env.APPDATA || join(home, 'AppData', 'Roaming');
+    const localAppData = process.env.LOCALAPPDATA || join(home, 'AppData', 'Local');
+    const config = join(appData, 'jano');
+    const data = join(localAppData, 'jano');
+    return {
+      config,
+      data,
+      plugins: join(data, 'plugins'),
+      cache: join(localAppData, 'jano', 'cache'),
+    };
+  }
+
+  if (os === 'darwin') {
+    const appSupport = join(home, 'Library', 'Application Support', 'jano');
+    return {
+      config: appSupport,
+      data: appSupport,
+      plugins: join(appSupport, 'plugins'),
+      cache: join(home, 'Library', 'Caches', 'jano'),
+    };
+  }
+
+  // linux + other unix
+  const configDir = process.env.XDG_CONFIG_HOME || join(home, '.config');
+  const dataDir = process.env.XDG_DATA_HOME || join(home, '.local', 'share');
+  const cacheDir = process.env.XDG_CACHE_HOME || join(home, '.cache');
+
+  return {
+    config: join(configDir, 'jano'),
+    data: join(dataDir, 'jano'),
+    plugins: join(dataDir, 'jano', 'plugins'),
+    cache: join(cacheDir, 'jano'),
+  };
+}
+
+const paths = resolvePaths();
+
+export function getPaths(): JanoPaths { return paths; }
+export function getConfigDir(): string { return paths.config; }
+export function getPluginsDir(): string { return paths.plugins; }
+export function getCacheDir(): string { return paths.cache; }
+export function getConfigPath(): string { return join(paths.config, 'config.json'); }
+
+export function ensureDirs() {
+  for (const dir of [paths.config, paths.data, paths.plugins, paths.cache]) {
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  }
 }
 
 export function loadConfig(): JanoConfig {
-  ensureJanoDir();
+  ensureDirs();
+  const configPath = getConfigPath();
 
-  if (!existsSync(CONFIG_PATH)) {
+  if (!existsSync(configPath)) {
     return { plugins: {} };
   }
 
   try {
-    const raw = readFileSync(CONFIG_PATH, 'utf8');
+    const raw = readFileSync(configPath, 'utf8');
     return JSON.parse(raw) as JanoConfig;
   } catch {
     return { plugins: {} };
@@ -35,8 +84,8 @@ export function loadConfig(): JanoConfig {
 }
 
 export function saveConfig(config: JanoConfig) {
-  ensureJanoDir();
-  writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
+  ensureDirs();
+  writeFileSync(getConfigPath(), JSON.stringify(config, null, 2), 'utf8');
 }
 
 export function isPluginEnabled(config: JanoConfig, name: string): boolean {
