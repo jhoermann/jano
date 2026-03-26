@@ -124,8 +124,9 @@ export function showDialog(
       // buttons
       if (buttons.length > 0) {
         row++;
-        const totalLen = buttons.reduce((sum, b) => sum + b.label.length + 4, 0)
-          + (buttons.length - 1) * 2;
+        // each button: " Label " (label + 2 padding) + 2 gap between
+        const btnWidths = buttons.map(b => b.label.length + 2);
+        const totalLen = btnWidths.reduce((a, b) => a + b, 0) + (buttons.length - 1) * 2;
         let btnX = x + Math.floor((w - totalLen) / 2);
 
         for (let i = 0; i < buttons.length; i++) {
@@ -135,7 +136,7 @@ export function showDialog(
             fg: isActive ? theme.buttonActiveFg : theme.buttonFg,
             bg: isActive ? theme.buttonActiveBg : theme.buttonBg,
           });
-          btnX += label.length + 2;
+          btnX += btnWidths[i] + 2;
         }
       }
 
