@@ -1,18 +1,19 @@
 #!/usr/bin/env node
-import { createScreen, createDraw, showDialog } from '@jano/ui';
-import { createEditor, save } from './editor.ts';
-import { createCursorManager } from './cursor-manager.ts';
-import { createUndoManager } from './undo.ts';
-import { parseKey } from './keypress.ts';
-import { handleKey } from './input.ts';
-import { render, getViewDimensions } from './render.ts';
-import { initPlugins, detectLanguage, getLoadedPlugins } from './plugins/index.ts';
-import type { LanguagePlugin } from './plugins/types.ts';
+import { createScreen, createDraw, showDialog } from "@jano/ui";
+import { createEditor, save } from "./editor.ts";
+import { createCursorManager } from "./cursor-manager.ts";
+import { createUndoManager } from "./undo.ts";
+import { parseKey } from "./keypress.ts";
+import { handleKey } from "./input.ts";
+import { render, getViewDimensions } from "./render.ts";
+import { initPlugins, detectLanguage, getLoadedPlugins } from "./plugins/index.ts";
+import { getPaths } from "./plugins/config.ts";
+import type { LanguagePlugin } from "./plugins/types.ts";
 
 const filePath = process.argv[2];
 
 if (!filePath) {
-  console.error('Usage: jano <file>');
+  console.error("Usage: jano <file>");
   process.exit(1);
 }
 
@@ -40,26 +41,31 @@ async function confirmExit() {
 
   dialogOpen = true;
 
-  const result = await showDialog(screen, draw, {
-    title: 'Unsaved Changes',
-    message: `Save changes to "${editor.filePath}" before closing?`,
-    buttons: [
-      { label: 'Save', value: 'save' },
-      { label: 'Discard', value: 'discard' },
-      { label: 'Cancel', value: 'cancel' },
-    ],
-    border: 'round',
-  }, update);
+  const result = await showDialog(
+    screen,
+    draw,
+    {
+      title: "Unsaved Changes",
+      message: `Save changes to "${editor.filePath}" before closing?`,
+      buttons: [
+        { label: "Save", value: "save" },
+        { label: "Discard", value: "discard" },
+        { label: "Cancel", value: "cancel" },
+      ],
+      border: "round",
+    },
+    update,
+  );
 
   dialogOpen = false;
 
-  if (result.type === 'button') {
-    if (result.value === 'save') {
+  if (result.type === "button") {
+    if (result.value === "save") {
       save(editor);
       screen.leave();
       process.exit(0);
     }
-    if (result.value === 'discard') {
+    if (result.value === "discard") {
       screen.leave();
       process.exit(0);
     }
@@ -73,12 +79,17 @@ async function showHistory() {
 
   if (history.length === 0) {
     dialogOpen = true;
-    await showDialog(screen, draw, {
-      title: 'History',
-      message: 'No changes recorded yet.',
-      buttons: [{ label: 'OK', value: 'ok' }],
-      border: 'round',
-    }, update);
+    await showDialog(
+      screen,
+      draw,
+      {
+        title: "History",
+        message: "No changes recorded yet.",
+        buttons: [{ label: "OK", value: "ok" }],
+        border: "round",
+      },
+      update,
+    );
     dialogOpen = false;
     update();
     return;
@@ -86,32 +97,37 @@ async function showHistory() {
 
   dialogOpen = true;
 
-  const items: string[] = ['  0. Original file'];
+  const items: string[] = ["  0. Original file"];
   for (let i = 0; i < history.length; i++) {
     const entry = history[i];
     const time = new Date(entry.timestamp).toLocaleTimeString();
     const desc = undo.describeEntry(entry);
-    const marker = i === history.length - 1 ? '▸' : ' ';
+    const marker = i === history.length - 1 ? "▸" : " ";
     items.push(`${marker} ${i + 1}. [${time}] ${desc}`);
   }
 
-  const result = await showDialog(screen, draw, {
-    title: `History (${history.length} changes)`,
-    message: items.slice(-15).join('\n'),
-    input: true,
-    inputPlaceholder: 'Number (0 = original)...',
-    buttons: [
-      { label: 'Jump', value: 'jump' },
-      { label: 'Cancel', value: 'cancel' },
-    ],
-    border: 'round',
-    width: 60,
-  }, update);
+  const result = await showDialog(
+    screen,
+    draw,
+    {
+      title: `History (${history.length} changes)`,
+      message: items.slice(-15).join("\n"),
+      input: true,
+      inputPlaceholder: "Number (0 = original)...",
+      buttons: [
+        { label: "Jump", value: "jump" },
+        { label: "Cancel", value: "cancel" },
+      ],
+      border: "round",
+      width: 60,
+    },
+    update,
+  );
 
   dialogOpen = false;
 
-  if (result.type === 'input' || (result.type === 'button' && result.value === 'jump')) {
-    const inputVal = result.type === 'input' ? result.value : (result.inputValue ?? '');
+  if (result.type === "input" || (result.type === "button" && result.value === "jump")) {
+    const inputVal = result.type === "input" ? result.value : (result.inputValue ?? "");
     const idx = parseInt(inputVal, 10);
 
     if (idx === 0) {
@@ -133,7 +149,6 @@ async function showHistory() {
 
 // init
 async function start() {
-  const { getPaths } = await import('./plugins/config.ts');
   const paths = getPaths();
   console.log(`[jano] config: ${paths.config}`);
   console.log(`[jano] plugins: ${paths.plugins}`);
@@ -142,7 +157,9 @@ async function start() {
 
   console.log(`[jano] loaded ${loadResult.plugins.length} plugin(s)`);
   for (const p of loadResult.plugins) {
-    console.log(`[jano]   ✓ ${p.manifest.name} v${p.manifest.version} (${p.manifest.extensions.join(', ')})`);
+    console.log(
+      `[jano]   ✓ ${p.manifest.name} v${p.manifest.version} (${p.manifest.extensions.join(", ")})`,
+    );
   }
   for (const err of loadResult.errors) {
     console.log(`[jano]   ✗ ${err.dir}: ${err.error}`);
@@ -153,7 +170,7 @@ async function start() {
 
   plugin = detectLanguage(filePath);
   if (plugin) {
-    const loaded = getLoadedPlugins().find(p => p.plugin === plugin);
+    const loaded = getLoadedPlugins().find((p) => p.plugin === plugin);
     pluginVersion = loaded?.manifest.version;
     console.log(`[jano] language: ${plugin.name}`);
   }
@@ -165,17 +182,17 @@ async function start() {
 
 start();
 
-process.stdin.on('data', (data) => {
+process.stdin.on("data", (data) => {
   if (dialogOpen) return;
 
   const key = parseKey(data);
   const result = handleKey(key, editor, cm, screen, undo, plugin);
 
   switch (result) {
-    case 'exit':
+    case "exit":
       confirmExit();
       return;
-    case 'history':
+    case "history":
       showHistory();
       return;
   }
@@ -183,4 +200,4 @@ process.stdin.on('data', (data) => {
   update();
 });
 
-process.stdout.on('resize', update);
+process.stdout.on("resize", update);

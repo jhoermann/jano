@@ -1,22 +1,22 @@
-import type { Screen, Draw, RGB } from '@jano/ui';
-import type { EditorState } from './editor.ts';
-import type { CursorManager } from './cursor-manager.ts';
-import type { LanguagePlugin } from './plugins/types.ts';
-import { tokenizeLine } from './highlight.ts';
-import { tokenColors } from './plugins/types.ts';
+import type { Screen, Draw, RGB } from "@jano/ui";
+import type { EditorState } from "./editor.ts";
+import type { CursorManager } from "./cursor-manager.ts";
+import type { LanguagePlugin } from "./plugins/types.ts";
+import { tokenizeLine } from "./highlight.ts";
+import { tokenColors } from "./plugins/types.ts";
 
 function getShortcuts(plugin: LanguagePlugin | null): string[][] {
   const list = [
-    ['^Q', 'Exit'],
-    ['^S', 'Save'],
-    ['^Z', 'Undo'],
-    ['^Y', 'Redo'],
-    ['^X', 'Cut'],
-    ['^V', 'Paste'],
+    ["^Q", "Exit"],
+    ["^S", "Save"],
+    ["^Z", "Undo"],
+    ["^Y", "Redo"],
+    ["^X", "Cut"],
+    ["^V", "Paste"],
   ];
-  list.push(['^⇧↕', 'Multi']);
+  list.push(["^⇧↕", "Multi"]);
   if (plugin?.onFormat) {
-    list.push(['F3', 'Format']);
+    list.push(["F3", "Format"]);
   }
   return list;
 }
@@ -49,14 +49,14 @@ export function render(
   const { gw, contentTop, viewH, viewW } = getViewDimensions(screen, editor.lines.length);
 
   // outer border
-  draw.rect(0, 0, w, h - 1, { fg: [55, 60, 70], border: 'round' });
+  draw.rect(0, 0, w, h - 1, { fg: [55, 60, 70], border: "round" });
 
   // title bar background
   for (let x = 1; x < w - 1; x++) {
-    draw.char(x, 0, '─', { fg: [55, 60, 70] });
+    draw.char(x, 0, "─", { fg: [55, 60, 70] });
   }
   // title
-  const langName = plugin ? ` [${plugin.name}]` : '';
+  const langName = plugin ? ` [${plugin.name}]` : "";
   const title = ` jano — ${editor.filePath}${langName} `;
   const titleX = Math.floor((w - title.length) / 2);
   draw.text(titleX, 0, title, { fg: [230, 200, 100] });
@@ -73,7 +73,7 @@ export function render(
     if (lineIdx >= editor.lines.length) break;
 
     // line number (highlight current line)
-    const lineNum = String(lineIdx + 1).padStart(gw - 1, ' ') + ' ';
+    const lineNum = String(lineIdx + 1).padStart(gw - 1, " ") + " ";
     const isCurrentLine = lineIdx === cm.primary.y;
     draw.text(1, contentTop + y, lineNum, { fg: isCurrentLine ? [180, 185, 195] : [70, 75, 85] });
 
@@ -82,7 +82,7 @@ export function render(
     const tokens = tokenizeLine(line, plugin);
 
     // build color map for this line
-    const colorMap: (RGB | null)[] = new Array(line.length).fill(null);
+    const colorMap: (RGB | null)[] = Array.from<RGB | null>({ length: line.length }).fill(null);
     for (const token of tokens) {
       const color = tokenColors[token.type];
       if (color) {
@@ -97,7 +97,7 @@ export function render(
       const charIdx = col + cm.scrollX;
       const screenX = 1 + gw + col;
       const screenY = contentTop + y;
-      const ch = charIdx < line.length ? line[charIdx] : ' ';
+      const ch = charIdx < line.length ? line[charIdx] : " ";
 
       if (cm.isCellSelected(lineIdx, charIdx)) {
         draw.char(screenX, screenY, ch, { fg: [255, 255, 255], bg: [60, 100, 180] });
@@ -118,13 +118,16 @@ export function render(
     for (let y = 0; y < viewH; y++) {
       const screenY = contentTop + y;
       if (y >= thumbPos && y < thumbPos + thumbSize) {
-        draw.char(w - 1, screenY, '┃', { fg: [140, 140, 140] });
+        draw.char(w - 1, screenY, "┃", { fg: [140, 140, 140] });
       }
     }
   }
 
   // horizontal scrollbar (on the bottom border)
-  const maxLineLen = Math.max(...editor.lines.slice(cm.scrollY, cm.scrollY + viewH).map(l => l.length), 0);
+  const maxLineLen = Math.max(
+    ...editor.lines.slice(cm.scrollY, cm.scrollY + viewH).map((l) => l.length),
+    0,
+  );
   if (maxLineLen > viewW) {
     const scrollRatio = cm.scrollX / (maxLineLen - viewW);
     const thumbSize = Math.max(2, Math.round(viewW * (viewW / maxLineLen)));
@@ -132,7 +135,7 @@ export function render(
     const barY = h - 2; // bottom border line
     for (let x = 0; x < viewW; x++) {
       if (x >= thumbPos && x < thumbPos + thumbSize) {
-        draw.char(1 + gw + x, barY, '━', { fg: [140, 140, 140] });
+        draw.char(1 + gw + x, barY, "━", { fg: [140, 140, 140] });
       }
     }
   }
@@ -142,20 +145,26 @@ export function render(
   const statusY = h - 3;
   // fill status bar background
   for (let x = 1; x < w - 1; x++) {
-    draw.char(x, statusY, ' ', { bg: [45, 50, 60] });
+    draw.char(x, statusY, " ", { bg: [45, 50, 60] });
   }
   // left: cursor position
   const posInfo = ` Ln ${p.y + 1}, Col ${p.x + 1}`;
   draw.text(2, statusY, posInfo, { fg: [180, 185, 195], bg: [45, 50, 60] });
   // center: file info
-  const modified = editor.dirty ? ' ●' : '';
+  const modified = editor.dirty ? " ●" : "";
   const fileInfo = `${editor.lines.length} lines${modified}`;
   const fileInfoX = Math.floor((w - fileInfo.length) / 2);
-  draw.text(fileInfoX, statusY, fileInfo, { fg: editor.dirty ? [229, 192, 123] : [130, 135, 145], bg: [45, 50, 60] });
+  draw.text(fileInfoX, statusY, fileInfo, {
+    fg: editor.dirty ? [229, 192, 123] : [130, 135, 145],
+    bg: [45, 50, 60],
+  });
   // right: multi-cursor info
   if (cm.isMulti) {
     const multiInfo = `${cm.count} cursors `;
-    draw.text(w - multiInfo.length - 1, statusY, multiInfo, { fg: [100, 200, 255], bg: [45, 50, 60] });
+    draw.text(w - multiInfo.length - 1, statusY, multiInfo, {
+      fg: [100, 200, 255],
+      bg: [45, 50, 60],
+    });
   }
 
   // shortcut help
@@ -163,7 +172,7 @@ export function render(
   const sc = getShortcuts(plugin);
   // fill background
   for (let x = 0; x < w; x++) {
-    draw.char(x, helpY, ' ', { bg: [35, 38, 45] });
+    draw.char(x, helpY, " ", { bg: [35, 38, 45] });
   }
   // draw shortcuts evenly spaced with separator
   let helpX = 1;
@@ -173,7 +182,7 @@ export function render(
     draw.text(helpX + key.length, helpY, ` ${label}`, { fg: [120, 125, 135], bg: [35, 38, 45] });
     helpX += key.length + label.length + 3;
     if (i < sc.length - 1) {
-      draw.text(helpX - 1, helpY, '│', { fg: [55, 58, 65], bg: [35, 38, 45] });
+      draw.text(helpX - 1, helpY, "│", { fg: [55, 58, 65], bg: [35, 38, 45] });
     }
   }
 

@@ -1,12 +1,12 @@
-import type { LanguagePlugin, PluginContext, EditResult } from '@jano/plugin-types';
+import type { LanguagePlugin, PluginContext } from "@jano/plugin-types";
 
 const TAB_SIZE = 2;
 
-const keywords = ['true', 'false', 'null', 'yes', 'no', 'on', 'off'];
+const keywords = ["true", "false", "null", "yes", "no", "on", "off"];
 
 const plugin: LanguagePlugin = {
-  name: 'YAML',
-  extensions: ['.yml', '.yaml'],
+  name: "YAML",
+  extensions: [".yml", ".yaml"],
   highlight: {
     keywords,
     patterns: {
@@ -28,22 +28,22 @@ const plugin: LanguagePlugin = {
       const trimmed = raw.trim();
 
       // empty lines pass through
-      if (trimmed === '') {
-        formatted.push('');
+      if (trimmed === "") {
+        formatted.push("");
         continue;
       }
 
       // comment: keep at current indent
-      if (trimmed.startsWith('#')) {
-        formatted.push(' '.repeat(indentLevel * TAB_SIZE) + trimmed);
+      if (trimmed.startsWith("#")) {
+        formatted.push(" ".repeat(indentLevel * TAB_SIZE) + trimmed);
         continue;
       }
 
       // list item: indent at current level
-      if (trimmed.startsWith('- ')) {
-        formatted.push(' '.repeat(indentLevel * TAB_SIZE) + trimmed);
+      if (trimmed.startsWith("- ")) {
+        formatted.push(" ".repeat(indentLevel * TAB_SIZE) + trimmed);
         // if list item has nested content (value after - is a key:)
-        if (/^- \S+:/.test(trimmed) && trimmed.endsWith(':')) {
+        if (/^- \S+:/.test(trimmed) && trimmed.endsWith(":")) {
           indentLevel++;
         }
         continue;
@@ -60,17 +60,17 @@ const plugin: LanguagePlugin = {
           indentLevel = Math.round(originalIndent / TAB_SIZE);
         }
 
-        formatted.push(' '.repeat(indentLevel * TAB_SIZE) + trimmed);
+        formatted.push(" ".repeat(indentLevel * TAB_SIZE) + trimmed);
 
         // key with no value (just "key:") → next lines indent
-        if (trimmed.endsWith(':')) {
+        if (trimmed.endsWith(":")) {
           indentLevel++;
         }
         continue;
       }
 
       // everything else: keep at current indent
-      formatted.push(' '.repeat(indentLevel * TAB_SIZE) + trimmed);
+      formatted.push(" ".repeat(indentLevel * TAB_SIZE) + trimmed);
     }
 
     return {
@@ -80,29 +80,31 @@ const plugin: LanguagePlugin = {
   },
 
   onCursorAction(ctx: PluginContext) {
-    if (!ctx.action || ctx.action.type !== 'newline') return null;
+    if (!ctx.action || ctx.action.type !== "newline") return null;
 
     const cursor = ctx.action.cursor;
     const curLine = cursor.position.line;
-    const prevLine = curLine > 0 ? ctx.lines[curLine - 1] : '';
+    const prevLine = curLine > 0 ? ctx.lines[curLine - 1] : "";
     const match = prevLine.match(/^(\s*)/);
-    let indent = match ? match[1] : '';
+    let indent = match ? match[1] : "";
 
     if (/:\s*$/.test(prevLine)) {
-      indent += ' '.repeat(TAB_SIZE);
+      indent += " ".repeat(TAB_SIZE);
     } else if (/^\s*-\s/.test(prevLine)) {
       // continue list, keep indent
-    } else if (prevLine.trim() === '') {
-      indent = '';
+    } else if (prevLine.trim() === "") {
+      indent = "";
     }
 
     if (indent.length === 0) return null;
 
     return {
-      edits: [{
-        range: { start: { line: curLine, col: 0 }, end: { line: curLine, col: 0 } },
-        text: indent,
-      }],
+      edits: [
+        {
+          range: { start: { line: curLine, col: 0 }, end: { line: curLine, col: 0 } },
+          text: indent,
+        },
+      ],
       cursors: [{ position: { line: curLine, col: indent.length }, anchor: null }],
     };
   },
