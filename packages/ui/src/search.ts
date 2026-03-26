@@ -13,14 +13,32 @@ export interface SearchMatch {
 
 export interface SearchOptions {
   initialQuery?: string;
+  initialReplace?: string;
+  cursorLine?: number;
+  cursorCol?: number;
+  lastSelectedIndex?: number;
   border?: "single" | "double" | "round";
   width?: number;
   maxResults?: number;
 }
 
 export type SearchResult =
-  | { type: "jump"; match: SearchMatch; query: string }
-  | { type: "cancel"; query: string };
+  | { type: "jump"; match: SearchMatch; query: string; selectedIndex: number }
+  | {
+      type: "replace";
+      match: SearchMatch;
+      query: string;
+      replacement: string;
+      selectedIndex: number;
+    }
+  | {
+      type: "replaceAll";
+      matches: SearchMatch[];
+      query: string;
+      replacement: string;
+      selectedIndex: number;
+    }
+  | { type: "cancel"; query: string; replacement: string; selectedIndex: number };
 
 const theme = {
   border: [80, 90, 105] as RGB,
@@ -28,8 +46,11 @@ const theme = {
   title: [230, 200, 100] as RGB,
   inputFg: [255, 255, 255] as RGB,
   inputBg: [45, 48, 55] as RGB,
+  inputActiveBorder: [100, 200, 255] as RGB,
   placeholder: [80, 85, 95] as RGB,
   matchCount: [100, 200, 255] as RGB,
+  labelFg: [130, 135, 145] as RGB,
+  replaceFg: [152, 195, 121] as RGB,
 };
 
 function findMatches(lines: readonly string[], query: string, maxResults: number): SearchMatch[] {
@@ -69,12 +90,25 @@ export function showSearch(
 ): Promise<SearchResult> {
   return new Promise((resolve) => {
     let query = opts.initialQuery ?? "";
-    let cursorX = query.length;
-    let matches: SearchMatch[] = findMatches(lines, query, opts.maxResults ?? 500);
+    let replace = opts.initialReplace ?? "";
+    let queryCursorX = query.length;
+    let replaceCursorX = replace.length;
+    // 0 = search input, 1 = replace input
+    let activeField = 0;
+    let matches: SearchMatch[] = [];
     let listState = { selectedIndex: 0, scrollOffset: 0 };
 
     const searchW = opts.width ?? Math.min(60, screen.width - 4);
-    const listH = Math.min(15, screen.height - 8);
+    const listH = Math.min(15, screen.height - 10);
+
+    // initial match + restore last selection if available
+    updateMatches();
+    if (opts.lastSelectedIndex != null && opts.lastSelectedIndex < matches.length) {
+      listState = {
+        selectedIndex: opts.lastSelectedIndex,
+        scrollOffset: Math.max(0, opts.lastSelectedIndex - Math.floor(listH / 2)),
+      };
+    }
 
     let backgroundDrawn = false;
 
@@ -84,9 +118,10 @@ export function showSearch(
         backgroundDrawn = true;
       }
 
-      const totalH = 3 + listH + 1;
+      const totalH = 5 + listH + 1; // border + search + replace + sep + list + border
       const x = Math.floor((screen.width - searchW) / 2);
       const y = 1;
+      const inputW = searchW - 7; // label (3) + padding
 
       // dialog box
       draw.rect(x, y, searchW, totalH, {
@@ -96,37 +131,73 @@ export function showSearch(
       });
 
       // title + match count
-      const titleText = " Search ";
+      const titleText = " Search & Replace ";
       draw.text(x + Math.floor((searchW - titleText.length) / 2), y, titleText, {
         fg: theme.title,
       });
       if (query.length > 0) {
-        const countText = ` ${matches.length} matches `;
+        const countText = ` ${matches.length} `;
         draw.text(x + searchW - countText.length - 1, y, countText, {
           fg: theme.matchCount,
         });
       }
 
-      // input field
-      const inputY = y + 1;
-      const inputW = searchW - 4;
+      // search input (row 1)
+      const searchY = y + 1;
+      draw.text(x + 1, searchY, "  ⌕", { fg: theme.labelFg, bg: theme.fill });
       for (let i = 0; i < inputW; i++) {
-        draw.char(x + 2 + i, inputY, " ", { bg: theme.inputBg });
+        draw.char(x + 5 + i, searchY, " ", { bg: theme.inputBg });
       }
       if (query.length > 0) {
-        draw.text(x + 2, inputY, query.substring(0, inputW), {
+        draw.text(x + 5, searchY, query.substring(0, inputW), {
           fg: theme.inputFg,
           bg: theme.inputBg,
         });
       } else {
-        draw.text(x + 2, inputY, "Type to search...", {
+        draw.text(x + 5, searchY, "Search...", {
           fg: theme.placeholder,
           bg: theme.inputBg,
         });
       }
+      // active indicator
+      if (activeField === 0) {
+        draw.char(x + 4, searchY, "▎", { fg: theme.inputActiveBorder });
+      }
+
+      // replace input (row 2)
+      const replaceY = y + 2;
+      draw.text(x + 1, replaceY, "  →", { fg: theme.labelFg, bg: theme.fill });
+      for (let i = 0; i < inputW; i++) {
+        draw.char(x + 5 + i, replaceY, " ", { bg: theme.inputBg });
+      }
+      if (replace.length > 0) {
+        draw.text(x + 5, replaceY, replace.substring(0, inputW), {
+          fg: theme.replaceFg,
+          bg: theme.inputBg,
+        });
+      } else {
+        draw.text(x + 5, replaceY, "Replace...", {
+          fg: theme.placeholder,
+          bg: theme.inputBg,
+        });
+      }
+      if (activeField === 1) {
+        draw.char(x + 4, replaceY, "▎", { fg: theme.inputActiveBorder });
+      }
+
+      // hint row
+      const hintY = y + 3;
+      const hint =
+        replace.length > 0
+          ? " Enter=Replace  ^A=All  ↑↓=Nav  Esc=Close"
+          : " Enter=Jump  ↑↓=Navigate  Tab=Replace  Esc=Close";
+      draw.text(x + 1, hintY, hint.substring(0, searchW - 2), {
+        fg: [70, 75, 85],
+        bg: theme.fill,
+      });
 
       // separator
-      const sepY = y + 2;
+      const sepY = y + 4;
       for (let i = 1; i < searchW - 1; i++) {
         draw.char(x + i, sepY, "─", { fg: theme.border });
       }
@@ -148,46 +219,124 @@ export function showSearch(
         bg: theme.fill,
       });
 
-      // hide cursor during flush to prevent flicker
       screen.hideCursor();
       draw.flush();
 
-      // position cursor in input
-      screen.moveTo(x + 2 + cursorX, inputY);
+      // position cursor in active input
+      if (activeField === 0) {
+        screen.moveTo(x + 5 + queryCursorX, searchY);
+      } else {
+        screen.moveTo(x + 5 + replaceCursorX, replaceY);
+      }
       screen.showCursor();
     }
 
-    function updateMatches() {
+    function updateMatches(preserveSelection = false) {
       matches = findMatches(lines, query, opts.maxResults ?? 500);
-      listState = { selectedIndex: 0, scrollOffset: 0 };
+      if (preserveSelection && listState.selectedIndex < matches.length) {
+        return;
+      }
+      // select nearest match at or after cursor position
+      const cl = opts.cursorLine ?? 0;
+      const cc = opts.cursorCol ?? 0;
+      let best = 0;
+      for (let i = 0; i < matches.length; i++) {
+        const m = matches[i];
+        if (m.line > cl || (m.line === cl && m.col >= cc)) {
+          best = i;
+          break;
+        }
+        best = i;
+      }
+      listState = { selectedIndex: best, scrollOffset: Math.max(0, best - Math.floor(listH / 2)) };
+    }
+
+    // get active field text + cursor
+    function getActiveText(): string {
+      return activeField === 0 ? query : replace;
+    }
+    function getActiveCursorX(): number {
+      return activeField === 0 ? queryCursorX : replaceCursorX;
+    }
+    function setActiveText(text: string) {
+      if (activeField === 0) {
+        query = text;
+        updateMatches();
+      } else {
+        replace = text;
+      }
+    }
+    function setActiveCursorX(x: number) {
+      if (activeField === 0) queryCursorX = x;
+      else replaceCursorX = x;
     }
 
     function onData(data: Buffer) {
       // escape
       if (data[0] === 0x1b && data.length === 1) {
         cleanup();
-        resolve({ type: "cancel", query });
+        resolve({
+          type: "cancel",
+          query,
+          replacement: replace,
+          selectedIndex: listState.selectedIndex,
+        });
+        return;
+      }
+
+      // tab: switch fields
+      if (data[0] === 9) {
+        activeField = activeField === 0 ? 1 : 0;
+        renderSearch();
         return;
       }
 
       // enter
       if (data[0] === 13) {
+        if (matches.length === 0) return;
         cleanup();
-        if (matches.length > 0) {
+
+        if (replace.length > 0) {
+          resolve({
+            type: "replace",
+            match: matches[listState.selectedIndex],
+            query,
+            replacement: replace,
+            selectedIndex: listState.selectedIndex,
+          });
+        } else {
           resolve({
             type: "jump",
             match: matches[listState.selectedIndex],
             query,
+            selectedIndex: listState.selectedIndex,
           });
-        } else {
-          resolve({ type: "cancel", query });
         }
         return;
       }
 
-      // arrow up/down navigate results
+      // ctrl+a: replace all
+      if (data.length === 1 && data[0] === 1 && replace.length > 0 && matches.length > 0) {
+        cleanup();
+        resolve({
+          type: "replaceAll",
+          matches: [...matches],
+          query,
+          replacement: replace,
+          selectedIndex: listState.selectedIndex,
+        });
+        return;
+      }
+
+      // escape sequences (arrows, shift+tab)
       if (data[0] === 0x1b && data[1] === 0x5b) {
         const seq = data.toString("utf8", 2);
+        // shift+tab: switch fields backwards
+        if (seq === "Z") {
+          activeField = activeField === 0 ? 1 : 0;
+          renderSearch();
+          return;
+        }
         if (seq === "A" && matches.length > 0) {
           listState = listMoveUp(listState, matches.length);
           renderSearch();
@@ -198,25 +347,23 @@ export function showSearch(
           renderSearch();
           return;
         }
-        // left/right in input
         if (seq === "C") {
-          cursorX = Math.min(cursorX + 1, query.length);
+          setActiveCursorX(Math.min(getActiveCursorX() + 1, getActiveText().length));
           renderSearch();
           return;
         }
         if (seq === "D") {
-          cursorX = Math.max(cursorX - 1, 0);
+          setActiveCursorX(Math.max(getActiveCursorX() - 1, 0));
           renderSearch();
           return;
         }
-        // home/end
         if (seq === "H") {
-          cursorX = 0;
+          setActiveCursorX(0);
           renderSearch();
           return;
         }
         if (seq === "F") {
-          cursorX = query.length;
+          setActiveCursorX(getActiveText().length);
           renderSearch();
           return;
         }
@@ -225,10 +372,11 @@ export function showSearch(
 
       // backspace
       if (data[0] === 127) {
-        if (cursorX > 0) {
-          query = query.substring(0, cursorX - 1) + query.substring(cursorX);
-          cursorX--;
-          updateMatches();
+        const cx = getActiveCursorX();
+        if (cx > 0) {
+          const text = getActiveText();
+          setActiveText(text.substring(0, cx - 1) + text.substring(cx));
+          setActiveCursorX(cx - 1);
           renderSearch();
         }
         return;
@@ -236,9 +384,10 @@ export function showSearch(
 
       // ctrl+backspace
       if (data[0] === 0x08) {
-        query = query.substring(cursorX);
-        cursorX = 0;
-        updateMatches();
+        const text = getActiveText();
+        const cx = getActiveCursorX();
+        setActiveText(text.substring(cx));
+        setActiveCursorX(0);
         renderSearch();
         return;
       }
@@ -247,9 +396,10 @@ export function showSearch(
       const ch = data.toString("utf8");
       const code = ch.codePointAt(0) ?? 0;
       if (code >= 32) {
-        query = query.substring(0, cursorX) + ch + query.substring(cursorX);
-        cursorX += ch.length;
-        updateMatches();
+        const text = getActiveText();
+        const cx = getActiveCursorX();
+        setActiveText(text.substring(0, cx) + ch + text.substring(cx));
+        setActiveCursorX(cx + ch.length);
         renderSearch();
       }
     }

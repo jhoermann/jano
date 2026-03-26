@@ -148,6 +148,8 @@ async function showHistory() {
 }
 
 let lastSearchQuery = "";
+let lastReplaceText = "";
+let lastSelectedIndex: number | undefined;
 
 async function openSearch() {
   dialogOpen = true;
@@ -158,6 +160,10 @@ async function openSearch() {
     editor.lines,
     {
       initialQuery: lastSearchQuery,
+      initialReplace: lastReplaceText,
+      cursorLine: cm.primary.y,
+      cursorCol: cm.primary.x,
+      lastSelectedIndex,
       border: "round",
     },
     update,
@@ -165,13 +171,53 @@ async function openSearch() {
 
   dialogOpen = false;
   lastSearchQuery = result.query;
+  lastSelectedIndex = result.selectedIndex;
+  // only remember replace text if user actually replaced something
+  if (result.type === "replace" || result.type === "replaceAll") {
+    lastReplaceText = result.replacement;
+  } else {
+    lastReplaceText = "";
+  }
+
+  const p = cm.primary;
+  cm.clearExtras();
 
   if (result.type === "jump") {
-    const p = cm.primary;
-    cm.clearExtras();
     p.y = result.match.line;
     p.x = result.match.col;
     p.anchor = null;
+  }
+
+  if (result.type === "replace") {
+    // replace single match
+    undo.snapshot("replace", { x: p.x, y: p.y }, editor.lines, cm.saveState());
+    const m = result.match;
+    const line = editor.lines[m.line];
+    editor.lines[m.line] =
+      line.substring(0, m.col) + result.replacement + line.substring(m.col + m.length);
+    editor.dirty = true;
+    p.y = m.line;
+    p.x = m.col + result.replacement.length;
+    p.anchor = null;
+    undo.commit({ x: p.x, y: p.y }, editor.lines, cm.saveState());
+
+    // reopen search to continue replacing
+    update();
+    void openSearch();
+    return;
+  }
+
+  if (result.type === "replaceAll") {
+    undo.snapshot("replace-all", { x: p.x, y: p.y }, editor.lines, cm.saveState());
+    // apply replacements bottom-up to preserve positions
+    const sorted = [...result.matches].sort((a, b) => b.line - a.line || b.col - a.col);
+    for (const m of sorted) {
+      const line = editor.lines[m.line];
+      editor.lines[m.line] =
+        line.substring(0, m.col) + result.replacement + line.substring(m.col + m.length);
+    }
+    editor.dirty = true;
+    undo.commit({ x: p.x, y: p.y }, editor.lines, cm.saveState());
   }
 
   update();
