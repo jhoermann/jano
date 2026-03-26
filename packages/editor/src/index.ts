@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createScreen, createDraw, showDialog } from "@jano/ui";
+import { createScreen, createDraw, showDialog, showSearch } from "@jano/ui";
 import { createEditor, save } from "./editor.ts";
 import { createCursorManager } from "./cursor-manager.ts";
 import { createUndoManager } from "./undo.ts";
@@ -147,6 +147,36 @@ async function showHistory() {
   update();
 }
 
+let lastSearchQuery = "";
+
+async function openSearch() {
+  dialogOpen = true;
+
+  const result = await showSearch(
+    screen,
+    draw,
+    editor.lines,
+    {
+      initialQuery: lastSearchQuery,
+      border: "round",
+    },
+    update,
+  );
+
+  dialogOpen = false;
+  lastSearchQuery = result.query;
+
+  if (result.type === "jump") {
+    const p = cm.primary;
+    cm.clearExtras();
+    p.y = result.match.line;
+    p.x = result.match.col;
+    p.anchor = null;
+  }
+
+  update();
+}
+
 // init
 async function start() {
   const paths = getPaths();
@@ -180,7 +210,7 @@ async function start() {
   update();
 }
 
-start();
+void start();
 
 process.stdin.on("data", (data) => {
   if (dialogOpen) return;
@@ -190,10 +220,13 @@ process.stdin.on("data", (data) => {
 
   switch (result) {
     case "exit":
-      confirmExit();
+      void confirmExit();
       return;
     case "history":
-      showHistory();
+      void showHistory();
+      return;
+    case "search":
+      void openSearch();
       return;
   }
 

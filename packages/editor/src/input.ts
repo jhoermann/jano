@@ -1,15 +1,15 @@
-import type { Screen } from '@jano/ui';
-import type { EditorState } from './editor.ts';
-import type { KeyEvent } from './keypress.ts';
-import type { UndoManager } from './undo.ts';
-import type { LanguagePlugin, ActionType } from './plugins/types.ts';
-import type { CursorManager, SingleCursor } from './cursor-manager.ts';
-import { wordBoundaryLeft, wordBoundaryRight } from './cursor-manager.ts';
-import * as ed from './editor.ts';
-import { buildContext, buildAction } from './plugins/context.ts';
-import { applyEditResult } from './plugins/apply.ts';
+import type { Screen } from "@jano/ui";
+import type { EditorState } from "./editor.ts";
+import type { KeyEvent } from "./keypress.ts";
+import type { UndoManager } from "./undo.ts";
+import type { LanguagePlugin, ActionType } from "./plugins/types.ts";
+import type { CursorManager, SingleCursor } from "./cursor-manager.ts";
+import { wordBoundaryLeft, wordBoundaryRight } from "./cursor-manager.ts";
+import * as ed from "./editor.ts";
+import { buildContext, buildAction } from "./plugins/context.ts";
+import { applyEditResult } from "./plugins/apply.ts";
 
-export type HandleKeyResult = 'continue' | 'exit' | 'history';
+export type HandleKeyResult = "continue" | "exit" | "history" | "search";
 
 function notifyPlugin(
   plugin: LanguagePlugin | null,
@@ -53,12 +53,11 @@ export function handleKey(
   undo: UndoManager,
   plugin: LanguagePlugin | null,
 ): HandleKeyResult {
-
   // --- multi-cursor: ctrl+shift+up/down ---
-  if (key.shift && key.ctrl && (key.name === 'up' || key.name === 'down')) {
+  if (key.shift && key.ctrl && (key.name === "up" || key.name === "down")) {
     const allCursors = cm.all;
-    if (key.name === 'up') {
-      const topmost = Math.min(...allCursors.map(c => c.y));
+    if (key.name === "up") {
+      const topmost = Math.min(...allCursors.map((c) => c.y));
       const newY = topmost - 1;
       if (newY >= 0) {
         const newX = Math.min(cm.primary.x, editor.lines[newY].length);
@@ -66,7 +65,7 @@ export function handleKey(
         cm.dedup();
       }
     } else {
-      const bottommost = Math.max(...allCursors.map(c => c.y));
+      const bottommost = Math.max(...allCursors.map((c) => c.y));
       const newY = bottommost + 1;
       if (newY < editor.lines.length) {
         const newX = Math.min(cm.primary.x, editor.lines[newY].length);
@@ -77,53 +76,53 @@ export function handleKey(
         cm.dedup();
       }
     }
-    return 'continue';
+    return "continue";
   }
 
   // --- selection with shift ---
 
   // shift+ctrl+arrow: select word by word
-  if (key.shift && key.ctrl && (key.name === 'left' || key.name === 'right')) {
+  if (key.shift && key.ctrl && (key.name === "left" || key.name === "right")) {
     cm.startSelectionAll();
     cm.moveWordAll(key.name, editor.lines);
     cm.clampAll(editor.lines);
     cm.collapseEmptySelections();
-    return 'continue';
+    return "continue";
   }
 
   // shift+arrow: select char/line
-  if (key.shift && ['up', 'down', 'left', 'right', 'home', 'end'].includes(key.name)) {
+  if (key.shift && ["up", "down", "left", "right", "home", "end"].includes(key.name)) {
     cm.startSelectionAll();
     cm.moveAll(key.name as any, editor.lines, screen.height - 2);
     cm.clampAll(editor.lines);
 
     // shift+up/down with multi-cursor: merge into one selection
-    if (cm.isMulti && (key.name === 'up' || key.name === 'down')) {
+    if (cm.isMulti && (key.name === "up" || key.name === "down")) {
       cm.mergeIntoSelection(key.name);
-      return 'continue';
+      return "continue";
     }
 
     cm.collapseEmptySelections();
-    return 'continue';
+    return "continue";
   }
 
   // --- escape ---
   if (key.raw.length === 1 && key.raw[0] === 0x1b) {
     if (cm.isMulti) {
       cm.clearExtras();
-      return 'continue';
+      return "continue";
     }
   }
 
   // --- alt+up/down: move lines ---
-  if (key.alt && (key.name === 'up' || key.name === 'down')) {
+  if (key.alt && (key.name === "up" || key.name === "down")) {
     const p = cm.primary;
     const range = cm.getSelection(p);
     const startLine = range ? range.start.y : p.y;
     const endLine = range ? range.end.y : p.y;
 
-    snap(undo, 'move-line', cm, editor);
-    if (key.name === 'up') {
+    snap(undo, "move-line", cm, editor);
+    if (key.name === "up") {
       if (ed.moveLinesUp(editor, startLine, endLine)) {
         p.y--;
         if (p.anchor) p.anchor = { x: p.anchor.x, y: p.anchor.y - 1 };
@@ -136,21 +135,20 @@ export function handleKey(
     }
     commit(undo, cm, editor);
     cm.clampAll(editor.lines);
-    return 'continue';
+    return "continue";
   }
 
   // --- function keys ---
-  if (key.name === 'f2') return 'history';
+  if (key.name === "f2") return "history";
 
-  if (key.name === 'f3' && plugin?.onFormat) {
-    const p = cm.primary;
-    snap(undo, 'format', cm, editor);
+  if (key.name === "f3" && plugin?.onFormat) {
+    snap(undo, "format", cm, editor);
     const ctx = buildContext(editor, cm, getViewport(cm, screen));
     const result = plugin.onFormat(ctx);
     if (result) applyEditResult(result, editor, cm);
     commit(undo, cm, editor);
     cm.clampAll(editor.lines);
-    return 'continue';
+    return "continue";
   }
 
   // --- ctrl shortcuts ---
@@ -158,24 +156,26 @@ export function handleKey(
     const p = cm.primary;
 
     switch (key.name) {
-      case 'q':
-        return 'exit';
+      case "q":
+        return "exit";
 
-      case 's':
+      case "s":
         ed.save(editor);
         break;
 
+      case "f":
+        return "search";
 
-      case 'left':
-        cm.moveWordAll('left', editor.lines);
+      case "left":
+        cm.moveWordAll("left", editor.lines);
         break;
 
-      case 'right':
-        cm.moveWordAll('right', editor.lines);
+      case "right":
+        cm.moveWordAll("right", editor.lines);
         break;
 
-      case 'backspace': {
-        snap(undo, 'delete-word', cm, editor);
+      case "backspace": {
+        snap(undo, "delete-word", cm, editor);
         cm.forEachBottomUp((c) => {
           if (c.anchor) {
             cm.deleteSelection(c, editor.lines);
@@ -191,8 +191,8 @@ export function handleKey(
         break;
       }
 
-      case 'delete': {
-        snap(undo, 'delete-word', cm, editor);
+      case "delete": {
+        snap(undo, "delete-word", cm, editor);
         cm.forEachBottomUp((c) => {
           if (c.anchor) {
             cm.deleteSelection(c, editor.lines);
@@ -206,7 +206,7 @@ export function handleKey(
         break;
       }
 
-      case 'z': {
+      case "z": {
         const result = undo.undo(editor.lines, p);
         if (result) {
           editor.lines = result.lines;
@@ -216,7 +216,7 @@ export function handleKey(
         break;
       }
 
-      case 'y': {
+      case "y": {
         const result = undo.redo(editor.lines, p);
         if (result) {
           editor.lines = result.lines;
@@ -226,7 +226,7 @@ export function handleKey(
         break;
       }
 
-      case 'c': {
+      case "c": {
         const parts: string[] = [];
         cm.forEachAll((c) => {
           const text = cm.getSelectedText(c, editor.lines);
@@ -239,8 +239,8 @@ export function handleKey(
         break;
       }
 
-      case 'x': {
-        snap(undo, 'cut', cm, editor);
+      case "x": {
+        snap(undo, "cut", cm, editor);
         const parts: string[] = [];
         cm.forEachBottomUp((c) => {
           if (c.anchor) {
@@ -250,7 +250,7 @@ export function handleKey(
           } else {
             parts.unshift(editor.lines[c.y]);
             editor.lines.splice(c.y, 1);
-            if (editor.lines.length === 0) editor.lines = [''];
+            if (editor.lines.length === 0) editor.lines = [""];
             if (c.y >= editor.lines.length) c.y = editor.lines.length - 1;
             c.x = Math.min(c.x, editor.lines[c.y].length);
             editor.dirty = true;
@@ -261,18 +261,16 @@ export function handleKey(
         break;
       }
 
-      case 'v': {
+      case "v": {
         if (editor.clipboardParts.length === 0) break;
-        snap(undo, 'paste', cm, editor);
+        snap(undo, "paste", cm, editor);
 
         const parts = editor.clipboardParts;
         const cursorCount = cm.count;
 
         if (parts.length === cursorCount) {
           // same number of parts as cursors: each cursor gets its own part
-          let i = 0;
           cm.forEachBottomUp((c) => {
-            // find which part this cursor gets (forEachBottomUp reverses order)
             const partIdx = cm.all.indexOf(c);
             if (c.anchor) {
               cm.deleteSelection(c, editor.lines);
@@ -281,7 +279,6 @@ export function handleKey(
             const pos = ed.pasteText(editor, c.x, c.y, parts[partIdx]);
             c.x = pos.x;
             c.y = pos.y;
-            i++;
           });
         } else if (cursorCount === 1) {
           // single cursor, multiple parts: paste all parts as lines
@@ -302,7 +299,7 @@ export function handleKey(
           editor.dirty = true;
         } else {
           // different count: paste everything joined at each cursor
-          const joined = parts.join('\n');
+          const joined = parts.join("\n");
           cm.forEachBottomUp((c) => {
             if (c.anchor) {
               cm.deleteSelection(c, editor.lines);
@@ -320,32 +317,31 @@ export function handleKey(
     }
 
     cm.clampAll(editor.lines);
-    return 'continue';
+    return "continue";
   }
 
   // --- normal keys ---
 
   switch (key.name) {
     // navigation
-    case 'up':
-    case 'down':
-    case 'left':
-    case 'right':
-    case 'home':
-    case 'end':
+    case "up":
+    case "down":
+    case "left":
+    case "right":
+    case "home":
+    case "end":
       cm.clearSelectionAll();
       cm.moveAll(key.name, editor.lines, 0);
       break;
-    case 'pageup':
-    case 'pagedown':
+    case "pageup":
+    case "pagedown":
       cm.clearSelectionAll();
       cm.moveAll(key.name, editor.lines, screen.height - 2);
       break;
 
     // enter
-    case 'enter': {
-      const p = cm.primary;
-      snap(undo, 'enter', cm, editor);
+    case "enter": {
+      snap(undo, "enter", cm, editor);
 
       const sorted = [...cm.all].sort((a, b) => a.y - b.y || a.x - b.x);
       let lineShift = 0;
@@ -359,7 +355,7 @@ export function handleKey(
         const pos = ed.insertNewline(editor, c.x, c.y);
         c.x = pos.x;
         c.y = pos.y;
-        notifyPlugin(plugin, 'newline', c, prev, editor, cm, screen);
+        notifyPlugin(plugin, "newline", c, prev, editor, cm, screen);
         lineShift++;
       }
 
@@ -368,9 +364,8 @@ export function handleKey(
     }
 
     // backspace
-    case 'backspace': {
-      const p = cm.primary;
-      snap(undo, 'backspace', cm, editor);
+    case "backspace": {
+      snap(undo, "backspace", cm, editor);
       cm.forEachBottomUp((c) => {
         const prev = { x: c.x, y: c.y };
         if (c.anchor) {
@@ -381,16 +376,15 @@ export function handleKey(
           c.x = pos.x;
           c.y = pos.y;
         }
-        notifyPlugin(plugin, 'backspace', c, prev, editor, cm, screen);
+        notifyPlugin(plugin, "backspace", c, prev, editor, cm, screen);
       });
       commit(undo, cm, editor);
       break;
     }
 
     // delete
-    case 'delete': {
-      const p = cm.primary;
-      snap(undo, 'delete', cm, editor);
+    case "delete": {
+      snap(undo, "delete", cm, editor);
       cm.forEachBottomUp((c) => {
         const prev = { x: c.x, y: c.y };
         if (c.anchor) {
@@ -399,20 +393,19 @@ export function handleKey(
         } else {
           ed.deleteCharForward(editor, c.x, c.y);
         }
-        notifyPlugin(plugin, 'delete', c, prev, editor, cm, screen);
+        notifyPlugin(plugin, "delete", c, prev, editor, cm, screen);
       });
       commit(undo, cm, editor);
       break;
     }
 
     // tab
-    case 'tab': {
-      const p = cm.primary;
-      snap(undo, 'tab', cm, editor);
+    case "tab": {
+      snap(undo, "tab", cm, editor);
       cm.forEachBottomUp((c) => {
         const prev = { x: c.x, y: c.y };
         c.x = ed.insertTab(editor, c.x, c.y);
-        notifyPlugin(plugin, 'tab', c, prev, editor, cm, screen);
+        notifyPlugin(plugin, "tab", c, prev, editor, cm, screen);
       });
       commit(undo, cm, editor);
       break;
@@ -421,11 +414,10 @@ export function handleKey(
     // regular character
     default: {
       const ch = key.name;
-      if (ch === 'unknown') break;
+      if (ch === "unknown") break;
       const code = ch.codePointAt(0) ?? 0;
       if (code >= 32) {
-        const p = cm.primary;
-        snap(undo, 'type', cm, editor);
+        snap(undo, "type", cm, editor);
 
         cm.forEachBottomUp((c) => {
           const prev = { x: c.x, y: c.y };
@@ -434,7 +426,7 @@ export function handleKey(
             editor.dirty = true;
           }
           c.x = ed.insertChar(editor, c.x, c.y, ch);
-          notifyPlugin(plugin, 'char', c, prev, editor, cm, screen, { char: ch });
+          notifyPlugin(plugin, "char", c, prev, editor, cm, screen, { char: ch });
         });
 
         commit(undo, cm, editor);
@@ -445,5 +437,5 @@ export function handleKey(
 
   cm.clampAll(editor.lines);
   cm.dedup();
-  return 'continue';
+  return "continue";
 }

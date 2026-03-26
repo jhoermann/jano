@@ -14,6 +14,7 @@ function getShortcuts(plugin: LanguagePlugin | null): string[][] {
     ["^X", "Cut"],
     ["^V", "Paste"],
   ];
+  list.push(["^F", "Search"]);
   list.push(["^⇧↕", "Multi"]);
   if (plugin?.onFormat) {
     list.push(["F3", "Format"]);
@@ -186,6 +187,7 @@ export function render(
     }
   }
 
+  screen.hideCursor();
   draw.flush();
 
   // position terminal cursor on primary
