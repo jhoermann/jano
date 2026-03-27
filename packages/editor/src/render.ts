@@ -1,4 +1,4 @@
-import type { Screen, Draw, RGB } from "@jano/ui";
+import type { Screen, Draw, RGB } from "@jano-editor/ui";
 import type { EditorState } from "./editor.ts";
 import type { CursorManager } from "./cursor-manager.ts";
 import type { LanguagePlugin } from "./plugins/types.ts";

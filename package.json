@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "prepare": "vp config",
-    "dev": "vp run --filter @jano/editor dev",
+    "dev": "vp run --filter @jano-editor/editor dev",
     "check": "vp check",
     "lint": "vp lint",
     "fmt": "vp fmt",

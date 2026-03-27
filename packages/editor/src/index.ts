@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createScreen, createDraw, showDialog, showSearch } from "@jano/ui";
+import { createScreen, createDraw, showDialog, showSearch } from "@jano-editor/ui";
 import { createEditor, saveAs } from "./editor.ts";
 import { createCursorManager } from "./cursor-manager.ts";
 import { createUndoManager } from "./undo.ts";

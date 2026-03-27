@@ -1,4 +1,4 @@
-import type { Screen } from "@jano/ui";
+import type { Screen } from "@jano-editor/ui";
 import type { EditorState } from "./editor.ts";
 import type { KeyEvent } from "./keypress.ts";
 import type { UndoManager } from "./undo.ts";

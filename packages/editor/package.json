@@ -1,5 +1,5 @@
 {
-  "name": "@jano/editor",
+  "name": "@jano-editor/editor",
   "version": "0.1.0",
   "bin": {
     "jano": "src/index.ts"
@@ -10,7 +10,7 @@
     "dev": "tsx src/index.ts"
   },
   "dependencies": {
-    "@jano/plugin-types": "workspace:*",
-    "@jano/ui": "workspace:*"
+    "@jano-editor/plugin-types": "workspace:*",
+    "@jano-editor/ui": "workspace:*"
   }
 }
