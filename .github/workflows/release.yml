@@ -59,7 +59,12 @@ jobs:
           fi
 
       - name: Build
-        run: pnpm --filter ${{ steps.pkg.outputs.filter }} build --if-present
+        run: |
+          if node -e "const p=require('./${{ steps.pkg.outputs.dir }}/package.json'); process.exit(p.scripts?.build ? 0 : 1)" 2>/dev/null; then
+            pnpm --filter ${{ steps.pkg.outputs.filter }} build
+          else
+            echo "No build script, skipping"
+          fi
 
       - name: Publish to npm
         working-directory: ${{ steps.pkg.outputs.dir }}
