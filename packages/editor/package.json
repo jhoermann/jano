@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "description": "A modern terminal editor with plugin support",
   "bin": {
-    "jano": "dist/jano.js"
+    "jano": "dist/cli.js"
   },
   "files": [
     "dist"
   ],
   "type": "module",
-  "main": "dist/jano.js",
+  "main": "dist/cli.js",
   "scripts": {
     "dev": "tsx src/cli.ts"
   },
