@@ -8,6 +8,8 @@ export type {
   Range,
   ActionType,
   CursorAction,
+  KeyInfo,
+  KeyResult,
   PluginContext,
   TextEdit,
   EditResult,

@@ -37,7 +37,7 @@ function notifyPlugin(
   editor: EditorState,
   cm: CursorManager,
   screen: Screen,
-  extra?: { char?: string; pastedText?: string },
+  extra?: { char?: string; pastedText?: string; deletedText?: string },
 ) {
   if (!plugin?.onCursorAction) return;
   const action = buildAction(actionType, c, { line: prevPos.y, col: prevPos.x }, extra);
@@ -71,6 +71,22 @@ export function handleKey(
   undo: UndoManager,
   plugin: LanguagePlugin | null,
 ): HandleKeyResult {
+  // --- plugin onKeyDown: let plugin intercept keys before editor ---
+  if (plugin?.onKeyDown) {
+    const keyInfo = { name: key.name, ctrl: !!key.ctrl, alt: !!key.alt, shift: !!key.shift };
+    const ctx = buildContext(editor, cm, getViewport(cm, screen));
+    const result = plugin.onKeyDown(keyInfo, ctx);
+    if (result?.handled) {
+      if (result.edit) {
+        snap(undo, "plugin-key", cm, editor);
+        applyEditResult(result.edit, editor, cm);
+        commit(undo, cm, editor);
+      }
+      cm.clampAll(editor.lines);
+      return "continue";
+    }
+  }
+
   // --- multi-cursor: ctrl+shift+up/down (Linux/macOS) or ctrl+alt+up/down (Windows/WSL) ---
   const isWindows = process.platform === "win32" || !!process.env["WSL_DISTRO_NAME"];
   const isMultiCursorCombo =
@@ -411,15 +427,20 @@ export function handleKey(
       snap(undo, "backspace", cm, editor);
       cm.forEachBottomUp((c) => {
         const prev = { x: c.x, y: c.y };
+        let deleted: string | undefined;
         if (c.anchor) {
+          deleted = cm.getSelectedText(c, editor.lines);
           cm.deleteSelection(c, editor.lines);
           editor.dirty = true;
         } else {
+          // capture char before cursor
+          if (c.x > 0) deleted = editor.lines[c.y][c.x - 1];
+          else if (c.y > 0) deleted = "\n";
           const pos = ed.deleteCharBack(editor, c.x, c.y);
           c.x = pos.x;
           c.y = pos.y;
         }
-        notifyPlugin(plugin, "backspace", c, prev, editor, cm, screen);
+        notifyPlugin(plugin, "backspace", c, prev, editor, cm, screen, { deletedText: deleted });
       });
       commit(undo, cm, editor);
       break;
@@ -430,13 +451,18 @@ export function handleKey(
       snap(undo, "delete", cm, editor);
       cm.forEachBottomUp((c) => {
         const prev = { x: c.x, y: c.y };
+        let deleted: string | undefined;
         if (c.anchor) {
+          deleted = cm.getSelectedText(c, editor.lines);
           cm.deleteSelection(c, editor.lines);
           editor.dirty = true;
         } else {
+          // capture char at cursor
+          if (c.x < editor.lines[c.y].length) deleted = editor.lines[c.y][c.x];
+          else if (c.y < editor.lines.length - 1) deleted = "\n";
           ed.deleteCharForward(editor, c.x, c.y);
         }
-        notifyPlugin(plugin, "delete", c, prev, editor, cm, screen);
+        notifyPlugin(plugin, "delete", c, prev, editor, cm, screen, { deletedText: deleted });
       });
       commit(undo, cm, editor);
       break;

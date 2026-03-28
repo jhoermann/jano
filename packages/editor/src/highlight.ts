@@ -1,6 +1,16 @@
 import type { LanguagePlugin, HighlightToken, HighlightPatterns } from "./plugins/types.ts";
 
-export function tokenizeLine(line: string, plugin: LanguagePlugin | null): HighlightToken[] {
+export function tokenizeLine(
+  line: string,
+  plugin: LanguagePlugin | null,
+  lineIndex?: number,
+  lines?: readonly string[],
+): HighlightToken[] {
+  // custom highlighting takes priority
+  if (plugin?.highlightLine && lineIndex !== undefined && lines) {
+    return plugin.highlightLine(line, lineIndex, lines);
+  }
+
   if (!plugin?.highlight) return [];
 
   const tokens: HighlightToken[] = [];

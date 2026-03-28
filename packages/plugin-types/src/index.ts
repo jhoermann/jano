@@ -56,6 +56,24 @@ export interface CursorAction {
   char?: string;
   // what was pasted (for 'paste')
   pastedText?: string;
+  // what was deleted (for 'backspace' and 'delete')
+  deletedText?: string;
+}
+
+// ----- Key Event (raw key press, before editor processes it) -----
+
+export interface KeyInfo {
+  name: string;
+  ctrl: boolean;
+  alt: boolean;
+  shift: boolean;
+}
+
+export interface KeyResult {
+  // true = plugin handled the key, editor should NOT process it
+  handled: boolean;
+  // optional edits to apply
+  edit?: EditResult;
 }
 
 // ----- Plugin Context -----
@@ -123,11 +141,19 @@ export interface LanguagePlugin {
   name: string;
   extensions: string[];
 
-  // syntax highlighting
+  // syntax highlighting — regex-based (simple, per-line)
   highlight?: {
     keywords?: string[];
     patterns?: HighlightPatterns;
   };
+
+  // custom highlighting — full control, multiline-aware
+  // if provided, this is used instead of regex-based highlight
+  highlightLine?(line: string, lineIndex: number, lines: readonly string[]): HighlightToken[];
+
+  // fired on key press, before the editor processes it
+  // plugin can handle the key itself and prevent default behavior
+  onKeyDown?(key: KeyInfo, context: PluginContext): KeyResult | null;
 
   // fired after each cursor action (newline, char typed, delete, etc.)
   // called once per cursor — plugin can respond with edits for that cursor

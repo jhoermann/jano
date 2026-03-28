@@ -41,7 +41,7 @@ export function buildAction(
   type: ActionType,
   c: SingleCursor,
   previousPosition: Position,
-  extra?: { char?: string; pastedText?: string },
+  extra?: { char?: string; pastedText?: string; deletedText?: string },
 ): CursorAction {
   return {
     type,
@@ -52,5 +52,6 @@ export function buildAction(
     previousPosition,
     char: extra?.char,
     pastedText: extra?.pastedText,
+    deletedText: extra?.deletedText,
   };
 }

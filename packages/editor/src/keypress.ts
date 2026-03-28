@@ -26,6 +26,13 @@ export function parseKey(data: Buffer): KeyEvent {
     return key;
   }
 
+  // ctrl+/ (0x1f)
+  if (data.length === 1 && data[0] === 0x1f) {
+    key.name = "/";
+    key.ctrl = true;
+    return key;
+  }
+
   // ctrl+letter
   if (data.length === 1 && data[0] < 27) {
     key.ctrl = true;

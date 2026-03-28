@@ -97,7 +97,7 @@ export function render(
 
     // tokenize line for highlighting
     const line = editor.lines[lineIdx];
-    const tokens = tokenizeLine(line, plugin);
+    const tokens = tokenizeLine(line, plugin, lineIdx, editor.lines);
 
     // build color map for this line
     const colorMap: (RGB | null)[] = Array.from<RGB | null>({ length: line.length }).fill(null);
