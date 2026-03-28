@@ -32,11 +32,15 @@ export function createValidator(plugin: LanguagePlugin | null, onDone?: () => vo
       if (input === lastInput) return;
       lastInput = input;
 
+      // clear old diagnostics immediately so stale results don't linger
+      state.diagnostics = [];
+
       if (timer) clearTimeout(timer);
 
+      const snapshot = [...lines];
       timer = setTimeout(() => {
         try {
-          state.diagnostics = plugin.onValidate!(lines);
+          state.diagnostics = plugin.onValidate!(snapshot);
         } catch {
           state.diagnostics = [];
         }
