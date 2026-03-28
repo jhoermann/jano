@@ -26,7 +26,8 @@ export type HandleKeyResult =
   | "search"
   | "goto"
   | "save"
-  | "diagnostics";
+  | "diagnostics"
+  | "help";
 
 function notifyPlugin(
   plugin: LanguagePlugin | null,
@@ -160,6 +161,7 @@ export function handleKey(
 
   // --- function keys (never insert as text) ---
   if (key.name === "f1" || key.name === "f2" || key.name === "f3" || key.name === "f4") {
+    if (key.name === "f1") return "help";
     if (key.name === "f2") return "history";
     if (key.name === "f4") return "diagnostics";
     if (key.name === "f3" && plugin?.onFormat) {

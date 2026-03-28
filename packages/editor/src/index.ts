@@ -401,6 +401,59 @@ async function openGoto() {
   update();
 }
 
+async function showHelp() {
+  dialogOpen = true;
+
+  const version = process.env.JANO_VERSION || "dev";
+  const helpText = [
+    `jano v${version}`,
+    "",
+    "Shortcuts:",
+    "  Ctrl+S        Save",
+    "  Ctrl+Q        Exit",
+    "  Ctrl+Z / Y    Undo / Redo",
+    "  Ctrl+X / C / V Cut / Copy / Paste",
+    "  Ctrl+A        Select All",
+    "  Ctrl+F        Search & Replace",
+    "  Ctrl+G        Go to Line",
+    "  Ctrl+Shift+↕  Multi-Cursor",
+    "  Shift+Arrow   Select",
+    "  Ctrl+Arrow    Word Jump",
+    "  Alt+↑↓        Move Line",
+    "  F1            Help",
+    "  F2            History Browser",
+    "  F3            Format (plugin)",
+    "  F4            Diagnostics",
+    "  Esc           Clear Multi-Cursor",
+    "",
+    "CLI Commands:",
+    "  jano <file>           Open file",
+    "  jano                  New file",
+    "  jano --version        Show version",
+    "  jano plugin list      Installed plugins",
+    "  jano plugin search    Browse store",
+    "  jano plugin install   Install plugin",
+    "  jano plugin remove    Remove plugin",
+    "  jano update           Update jano",
+  ].join("\n");
+
+  await showDialog(
+    screen,
+    draw,
+    {
+      title: "Help",
+      message: helpText,
+      buttons: [{ label: "Close", value: "close" }],
+      border: "round",
+      width: 50,
+    },
+    update,
+  );
+
+  dialogOpen = false;
+  update();
+}
+
 function showDiagnostics(): Promise<void> {
   const diags = validator.state.diagnostics;
 
@@ -602,6 +655,9 @@ process.stdin.on("data", (data) => {
   switch (result) {
     case "exit":
       void confirmExit();
+      return;
+    case "help":
+      void showHelp();
       return;
     case "history":
       void showHistory();

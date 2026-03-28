@@ -7,16 +7,15 @@ import { tokenColors } from "./plugins/types.ts";
 
 function getShortcuts(plugin: LanguagePlugin | null): string[][] {
   const list = [
+    ["F1", "Help"],
     ["^Q", "Exit"],
     ["^S", "Save"],
     ["^Z", "Undo"],
-    ["^Y", "Redo"],
     ["^X", "Cut"],
     ["^V", "Paste"],
+    ["^F", "Search"],
+    ["^G", "Go to"],
   ];
-  list.push(["^A", "Select All"]);
-  list.push(["^F", "Search"]);
-  list.push(["^G", "Go to"]);
   const isWindows = process.platform === "win32" || !!process.env["WSL_DISTRO_NAME"];
   list.push([isWindows ? "^⌥↕" : "^⇧↕", "Multi"]);
   if (plugin?.onFormat) {
@@ -216,21 +215,21 @@ export function render(
     });
   }
 
-  // shortcut help
+  // shortcut help — fit as many as possible, truncate rest
   const helpY = h - 1;
   const sc = getShortcuts(plugin);
-  // fill background
   for (let x = 0; x < w; x++) {
     draw.char(x, helpY, " ", { bg: [35, 38, 45] });
   }
-  // draw shortcuts evenly spaced with separator
   let helpX = 1;
   for (let i = 0; i < sc.length; i++) {
     const [key, label] = sc[i];
+    const entryWidth = key.length + label.length + 3;
+    if (helpX + entryWidth > w - 1) break; // stop if no room
     draw.text(helpX, helpY, key, { fg: [220, 220, 220], bg: [60, 65, 75] });
     draw.text(helpX + key.length, helpY, ` ${label}`, { fg: [120, 125, 135], bg: [35, 38, 45] });
-    helpX += key.length + label.length + 3;
-    if (i < sc.length - 1) {
+    helpX += entryWidth;
+    if (i < sc.length - 1 && helpX < w - 1) {
       draw.text(helpX - 1, helpY, "│", { fg: [55, 58, 65], bg: [35, 38, 45] });
     }
   }

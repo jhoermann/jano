@@ -127,11 +127,32 @@ async function handlePluginCommand() {
   }
 }
 
-// route: "jano plugin ..." or "jano <file>"
+async function handleUpdate() {
+  console.log(`[jano] Current version: v${VERSION}`);
+  console.log("[jano] Checking for updates...");
+  try {
+    const { execSync } = await import("node:child_process");
+    const latest = execSync("npm view @jano-editor/editor version", { encoding: "utf8" }).trim();
+    if (latest === VERSION) {
+      console.log(`[jano] Already up to date (v${VERSION}).`);
+    } else {
+      console.log(`[jano] Update available: v${VERSION} → v${latest}`);
+      console.log("[jano] Updating...");
+      execSync("npm install -g @jano-editor/editor@latest", { stdio: "inherit" });
+      console.log(`[jano] ✓ Updated to v${latest}`);
+    }
+  } catch (err) {
+    console.error(`[jano] Update failed: ${String(err)}`);
+    process.exit(1);
+  }
+}
+
+// route commands
 process.env.JANO_VERSION = VERSION;
 if (args[0] === "plugin") {
   void handlePluginCommand();
+} else if (args[0] === "update") {
+  void handleUpdate();
 } else {
-  // normal editor mode — dynamic import to avoid loading editor code for CLI commands
   void import("./index.ts");
 }
