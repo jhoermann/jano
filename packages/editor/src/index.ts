@@ -388,25 +388,30 @@ async function openGoto() {
   update();
 }
 
+const debug = !!process.env.JANO_DEBUG;
+function log(msg: string) {
+  if (debug) console.log(msg);
+}
+
 // init
 async function start() {
   const paths = getPaths();
-  console.log(`[jano] config: ${paths.config}`);
-  console.log(`[jano] plugins: ${paths.plugins}`);
+  log(`[jano] config: ${paths.config}`);
+  log(`[jano] plugins: ${paths.plugins}`);
 
   const loadResult = await initPlugins();
 
-  console.log(`[jano] loaded ${loadResult.plugins.length} plugin(s)`);
+  log(`[jano] loaded ${loadResult.plugins.length} plugin(s)`);
   for (const p of loadResult.plugins) {
-    console.log(
+    log(
       `[jano]   ✓ ${p.manifest.name} v${p.manifest.version} (${p.manifest.extensions.join(", ")})`,
     );
   }
   for (const err of loadResult.errors) {
-    console.log(`[jano]   ✗ ${err.dir}: ${err.error}`);
+    log(`[jano]   ✗ ${err.dir}: ${err.error}`);
   }
   for (const conflict of loadResult.conflicts) {
-    console.log(`[jano]   ⚠ ${conflict}`);
+    log(`[jano]   ⚠ ${conflict}`);
   }
 
   if (filePath) {
@@ -414,7 +419,7 @@ async function start() {
     if (plugin) {
       const loaded = getLoadedPlugins().find((p) => p.plugin === plugin);
       pluginVersion = loaded?.manifest.version;
-      console.log(`[jano] language: ${plugin.name}`);
+      log(`[jano] language: ${plugin.name}`);
     }
   }
 

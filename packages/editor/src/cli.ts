@@ -6,6 +6,12 @@ import { installPlugin, searchPlugins, fetchPluginList } from "./plugins/registr
 
 const args = process.argv.slice(2);
 
+// --debug flag
+if (args.includes("--debug")) {
+  process.env.JANO_DEBUG = "1";
+  args.splice(args.indexOf("--debug"), 1);
+}
+
 async function handlePluginCommand() {
   const subcommand = args[1];
 
