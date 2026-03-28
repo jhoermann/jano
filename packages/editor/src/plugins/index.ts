@@ -7,7 +7,7 @@ export type { LanguagePlugin, HighlightToken } from "./types.ts";
 export { tokenColors } from "./types.ts";
 export type { LoadedPlugin, LoadResult } from "./loader.ts";
 export { loadConfig, saveConfig, setPluginEnabled, ensureDirs, getPaths } from "./config.ts";
-export { installPlugin, checkUpdates, searchPlugins } from "./registry.ts";
+export { installPlugin, searchPlugins, fetchPluginList } from "./registry.ts";
 
 let loadedPlugins: LoadedPlugin[] = [];
 

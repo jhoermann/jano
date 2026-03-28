@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@jano-editor/plugin-types": "workspace:*",
-    "@jano-editor/ui": "workspace:*"
+    "@jano-editor/ui": "workspace:*",
+    "adm-zip": "^0.5.16"
   }
 }
