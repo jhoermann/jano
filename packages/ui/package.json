@@ -1,6 +1,24 @@
 {
   "name": "@jano-editor/ui",
   "version": "0.1.0",
+  "description": "Terminal UI library for jano editor",
+  "files": [
+    "dist"
+  ],
   "type": "module",
-  "main": "src/index.ts"
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --format=esm --platform=node --outfile=dist/index.js --external:node:*",
+    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist"
+  }
 }
