@@ -25,9 +25,11 @@ function resolvePaths(): JanoPaths {
     };
   }
 
-  // prefer real home over snap/sandboxed homedir
-  const home =
-    process.env.SNAP_REAL_HOME || process.env.HOME || process.env.USERPROFILE || homedir();
+  // prefer real user home — even when running under sudo
+  const sudoUser = process.env.SUDO_USER;
+  const home = sudoUser
+    ? join("/home", sudoUser)
+    : process.env.SNAP_REAL_HOME || process.env.HOME || process.env.USERPROFILE || homedir();
   const os = platform();
 
   if (os === "win32") {
