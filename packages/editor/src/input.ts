@@ -9,6 +9,18 @@ import * as ed from "./editor.ts";
 import { buildContext, buildAction } from "./plugins/context.ts";
 import { applyEditResult } from "./plugins/apply.ts";
 
+// strip control characters except \t (0x09) and \n (0x0a)
+function stripControlChars(text: string): string {
+  let result = "";
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    if (code === 0x09 || code === 0x0a || code >= 0x20) {
+      if (code !== 0x7f) result += text[i];
+    }
+  }
+  return result;
+}
+
 // copy to system clipboard (cross-platform)
 async function copyToSystemClipboard(text: string) {
   try {
@@ -85,6 +97,28 @@ export function handleKey(
       cm.clampAll(editor.lines);
       return "continue";
     }
+  }
+
+  // --- bracketed paste: terminal paste with multi-line support ---
+  if (key.name === "bracketedPaste") {
+    const text = key.raw.toString("utf8");
+    if (text.length > 0) {
+      snap(undo, "paste", cm, editor);
+      // normalize line endings + strip control chars (keep \n and \t)
+      const normalized = stripControlChars(text.replace(/\r\n?/g, "\n"));
+      cm.forEachBottomUp((c) => {
+        if (c.anchor) {
+          cm.deleteSelection(c, editor.lines);
+          editor.dirty = true;
+        }
+        const pos = ed.pasteText(editor, c.x, c.y, normalized);
+        c.x = pos.x;
+        c.y = pos.y;
+      });
+      editor.dirty = true;
+      commit(undo, cm, editor);
+    }
+    return "continue";
   }
 
   // --- multi-cursor: ctrl+shift+up/down (Linux/macOS) or ctrl+alt+up/down (Windows/WSL) ---
@@ -484,6 +518,25 @@ export function handleKey(
     default: {
       const ch = key.name;
       if (ch === "unknown") break;
+
+      // multi-char input with newlines = raw paste (no bracketed paste support)
+      const normalized = stripControlChars(ch.replace(/\r\n?/g, "\n"));
+      if (normalized.includes("\n")) {
+        snap(undo, "paste", cm, editor);
+        cm.forEachBottomUp((c) => {
+          if (c.anchor) {
+            cm.deleteSelection(c, editor.lines);
+            editor.dirty = true;
+          }
+          const pos = ed.pasteText(editor, c.x, c.y, normalized);
+          c.x = pos.x;
+          c.y = pos.y;
+        });
+        editor.dirty = true;
+        commit(undo, cm, editor);
+        break;
+      }
+
       const code = ch.codePointAt(0) ?? 0;
       if (code >= 32) {
         snap(undo, "type", cm, editor);

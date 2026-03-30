@@ -28,9 +28,11 @@ export function createScreen(stream: WriteStream = process.stdout as WriteStream
     enter() {
       write(`${ESC}[?1049h`); // alternate buffer
       write(`${ESC}[?25l`); // hide cursor
+      write(`${ESC}[?2004h`); // enable bracketed paste
     },
 
     leave() {
+      write(`${ESC}[?2004l`); // disable bracketed paste
       write(`${ESC}[?25h`); // show cursor
       write(`${ESC}[?1049l`); // restore buffer
     },

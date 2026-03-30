@@ -11,8 +11,8 @@ import {
 import { createEditor, saveAs } from "./editor.ts";
 import { createCursorManager } from "./cursor-manager.ts";
 import { createUndoManager } from "./undo.ts";
-import { parseKey } from "./keypress.ts";
-import { handleKey } from "./input.ts";
+import { parseKey, type KeyEvent } from "./keypress.ts";
+import { handleKey, type HandleKeyResult } from "./input.ts";
 import { render, getViewDimensions } from "./render.ts";
 import { initPlugins, detectLanguage, getLoadedPlugins } from "./plugins/index.ts";
 import { getPaths } from "./plugins/config.ts";
@@ -646,12 +646,55 @@ async function start() {
 
 void start();
 
+let pasteBuffer: string | null = null;
+
+function dispatch(key: KeyEvent) {
+  const result = handleKey(key, editor, cm, screen, undo, plugin);
+  if (result !== "continue") handleResult(result);
+  else update();
+}
+
+function makePasteKey(text: string): KeyEvent {
+  return {
+    name: "bracketedPaste",
+    ctrl: false,
+    shift: false,
+    alt: false,
+    raw: Buffer.from(text, "utf8"),
+  };
+}
+
 process.stdin.on("data", (data) => {
   if (dialogOpen) return;
 
-  const key = parseKey(data);
-  const result = handleKey(key, editor, cm, screen, undo, plugin);
+  const str = data.toString("utf8");
 
+  // bracketed paste: buffer chunks between ESC[200~ and ESC[201~
+  if (pasteBuffer !== null) {
+    const endIdx = str.indexOf("\x1b[201~");
+    if (endIdx === -1) {
+      pasteBuffer += str;
+      return;
+    }
+    pasteBuffer += str.slice(0, endIdx);
+    const text = pasteBuffer;
+    pasteBuffer = null;
+    return dispatch(makePasteKey(text));
+  }
+  if (str.startsWith("\x1b[200~")) {
+    const content = str.slice(6); // "\x1b[200~".length === 6
+    const endIdx = content.indexOf("\x1b[201~");
+    if (endIdx === -1) {
+      pasteBuffer = content;
+      return;
+    }
+    return dispatch(makePasteKey(content.slice(0, endIdx)));
+  }
+
+  dispatch(parseKey(data));
+});
+
+function handleResult(result: HandleKeyResult) {
   switch (result) {
     case "exit":
       void confirmExit();
@@ -678,9 +721,9 @@ process.stdin.on("data", (data) => {
         void saveWithDialog();
       }
       return;
+    default:
+      update();
   }
-
-  update();
-});
+}
 
 process.stdout.on("resize", () => update());
