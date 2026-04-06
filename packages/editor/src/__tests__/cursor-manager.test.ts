@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { createCursorManager } from "../cursor-manager.ts";
 
 describe("CursorManager", () => {
@@ -148,7 +148,7 @@ describe("CursorManager", () => {
 
       expect(cm.primary.x).toBe(5);
       expect(cm.primary.y).toBe(10);
-      expect(cm.primary.anchor).toEqual({ x: 2, y: 8 });
+      expect(cm.primary.anchor!).toEqual({ x: 2, y: 8 });
       expect(cm.count).toBe(2);
       expect(cm.all[1].x).toBe(3);
       expect(cm.all[1].y).toBe(15);

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { tokenizeLine } from "../highlight.ts";
 import type { LanguagePlugin } from "../plugins/types.ts";
 

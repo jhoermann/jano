@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { applyEditResult } from "../plugins/apply.ts";
 import { createCursorManager } from "../cursor-manager.ts";
 import type { EditorState } from "../editor.ts";

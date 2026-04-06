@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, mock } from "bun:test";
 import { createValidator } from "../validator.ts";
 import type { LanguagePlugin } from "../plugins/types.ts";
 
@@ -91,12 +91,12 @@ describe("Validator", () => {
   });
 
   it("calls onDone callback after validation", async () => {
-    const onDone = vi.fn();
+    const onDone = mock();
     const v = createValidator(makePlugin([]), onDone);
 
     v.schedule(["hello"]);
     await new Promise((r) => setTimeout(r, 600));
-    expect(onDone).toHaveBeenCalledOnce();
+    expect(onDone).toHaveBeenCalledTimes(1);
   });
 
   it("debounces rapid changes", async () => {

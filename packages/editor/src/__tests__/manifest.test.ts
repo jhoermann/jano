@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { validateManifest, CURRENT_API_VERSION } from "../plugins/manifest.ts";
 
 describe("validateManifest", () => {
