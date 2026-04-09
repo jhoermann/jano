@@ -1,6 +1,15 @@
 #!/usr/bin/env node
-import { readdirSync, readFileSync, rmSync, existsSync } from "node:fs";
+import {
+  readdirSync,
+  readFileSync,
+  rmSync,
+  existsSync,
+  writeFileSync,
+  chmodSync,
+  renameSync,
+} from "node:fs";
 import { join } from "node:path";
+import { platform, arch } from "node:os";
 import { getPluginsDir } from "./plugins/config.ts";
 import { installPlugin, searchPlugins, fetchPluginList } from "./plugins/registry.ts";
 
@@ -147,22 +156,124 @@ async function handlePluginCommand() {
   }
 }
 
+type InstallMethod = "npm" | "brew" | "standalone" | "dev";
+
+function detectInstallMethod(): InstallMethod {
+  const execPath = process.execPath;
+  const isBun = !!process.versions.bun;
+
+  // not bun → must be running under node → installed via npm
+  if (!isBun) return "npm";
+
+  // bun: either compiled binary or running script via `bun script.ts` (dev)
+  const basename = execPath.split(/[\\/]/).pop() ?? "";
+  if (basename === "bun" || basename === "bun.exe") return "dev";
+
+  // compiled bun binary
+  if (
+    execPath.includes("/homebrew/") ||
+    execPath.includes("/linuxbrew/") ||
+    execPath.includes("/Cellar/")
+  ) {
+    return "brew";
+  }
+
+  return "standalone";
+}
+
+async function fetchLatestEditorVersion(): Promise<string> {
+  const res = await fetch("https://api.github.com/repos/jano-editor/jano/releases?per_page=20", {
+    headers: { "User-Agent": "jano-update-check" },
+  });
+  if (!res.ok) throw new Error(`GitHub API returned ${res.status}`);
+  const releases = (await res.json()) as { tag_name: string }[];
+  const editor = releases.find((r) => r.tag_name.startsWith("editor-v"));
+  if (!editor) throw new Error("No editor release found on GitHub");
+  return editor.tag_name.replace(/^editor-v/, "");
+}
+
+function getBinaryAssetName(): string | null {
+  const os = platform();
+  const cpu = arch();
+  if (os === "linux" && cpu === "x64") return "jano-linux-x64";
+  if (os === "darwin" && cpu === "arm64") return "jano-darwin-arm64";
+  if (os === "win32" && cpu === "x64") return "jano-windows-x64.exe";
+  return null;
+}
+
+async function selfUpdateBinary(latestVersion: string): Promise<void> {
+  const assetName = getBinaryAssetName();
+  if (!assetName) {
+    throw new Error(`Unsupported platform: ${platform()}/${arch()}`);
+  }
+  if (platform() === "win32") {
+    throw new Error(
+      "Automatic self-update is not supported on Windows yet.\n" +
+        "Please re-download the latest version from https://janoeditor.dev",
+    );
+  }
+
+  const url = `https://github.com/jano-editor/jano/releases/download/editor-v${latestVersion}/${assetName}`;
+  console.log(`[jano] Downloading ${assetName}...`);
+
+  const res = await fetch(url, { headers: { "User-Agent": "jano-update" } });
+  if (!res.ok) throw new Error(`Download failed: HTTP ${res.status}`);
+  const buf = Buffer.from(await res.arrayBuffer());
+
+  const tmpFile = `${process.execPath}.new`;
+  writeFileSync(tmpFile, buf);
+  chmodSync(tmpFile, 0o755);
+  // atomic replace — works on linux/macOS even for the running binary
+  renameSync(tmpFile, process.execPath);
+
+  console.log(`[jano] ✓ Binary replaced. Restart jano to use v${latestVersion}.`);
+}
+
 async function handleUpdate() {
   console.log(`[jano] Current version: v${VERSION}`);
+
+  const method = detectInstallMethod();
+  console.log(`[jano] Install method:  ${method}`);
+
+  if (method === "dev") {
+    console.error("[jano] Running in dev mode (bun script.ts) — update not supported.");
+    process.exit(1);
+  }
+
   console.log("[jano] Checking for updates...");
+  let latest: string;
   try {
-    const { execSync } = await import("node:child_process");
-    const latest = execSync("npm view @jano-editor/editor version", { encoding: "utf8" }).trim();
-    if (latest === VERSION) {
-      console.log(`[jano] Already up to date (v${VERSION}).`);
-    } else {
-      console.log(`[jano] Update available: v${VERSION} → v${latest}`);
-      console.log("[jano] Updating...");
+    latest = await fetchLatestEditorVersion();
+  } catch (err) {
+    console.error(
+      `[jano] Could not check for updates: ${err instanceof Error ? err.message : String(err)}`,
+    );
+    process.exit(1);
+  }
+
+  if (latest === VERSION) {
+    console.log(`[jano] Already up to date (v${VERSION}).`);
+    return;
+  }
+
+  console.log(`[jano] Update available: v${VERSION} → v${latest}`);
+
+  try {
+    if (method === "npm") {
+      const { execSync } = await import("node:child_process");
+      console.log("[jano] Running: npm install -g @jano-editor/editor@latest");
       execSync("npm install -g @jano-editor/editor@latest", { stdio: "inherit" });
       console.log(`[jano] ✓ Updated to v${latest}`);
+    } else if (method === "brew") {
+      const { execSync } = await import("node:child_process");
+      console.log("[jano] Running: brew upgrade jano-editor/jano/jano");
+      execSync("brew upgrade jano-editor/jano/jano", { stdio: "inherit" });
+      console.log(`[jano] ✓ Updated to v${latest}`);
+    } else {
+      await selfUpdateBinary(latest);
     }
   } catch (err) {
-    console.error(`[jano] Update failed: ${String(err)}`);
+    console.error(`[jano] Update failed: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
   }
 }
