@@ -258,6 +258,11 @@ export function handleKey(
       case "g":
         return "goto";
 
+      case "d": {
+        cm.selectNextOccurrence(editor.lines);
+        break;
+      }
+
       case "left":
         cm.moveWordAll("left", editor.lines);
         break;
