@@ -81,6 +81,9 @@ export interface CursorManager {
 
   // delete the selection of a specific cursor from lines
   deleteSelection(c: SingleCursor, lines: string[]): void;
+
+  // VSCode-style Ctrl+D: select word under last cursor, or add cursor at next occurrence
+  selectNextOccurrence(lines: string[]): boolean;
 }
 
 // word boundary utils
@@ -389,6 +392,74 @@ export function createCursorManager(): CursorManager {
       c.x = range.start.x;
       c.y = range.start.y;
       c.anchor = null;
+    },
+
+    selectNextOccurrence(lines) {
+      const last = cursors[cursors.length - 1];
+
+      // no selection: try to select word at cursor
+      if (!last.anchor) {
+        const line = lines[last.y] ?? "";
+        const x = last.x;
+        const onWord = (x < line.length && /\w/.test(line[x])) || (x > 0 && /\w/.test(line[x - 1]));
+        if (!onWord) return false;
+        let start = x;
+        while (start > 0 && /\w/.test(line[start - 1])) start--;
+        let end = x;
+        while (end < line.length && /\w/.test(line[end])) end++;
+        last.anchor = { x: start, y: last.y };
+        last.x = end;
+        return true;
+      }
+
+      // has selection: search forward for next occurrence
+      const sel = getSelRange(last);
+      if (!sel) return false;
+      // single-line needles only (multi-line not supported)
+      if (sel.start.y !== sel.end.y) return false;
+      const needle = lines[sel.start.y].substring(sel.start.x, sel.end.x);
+      if (!needle) return false;
+
+      // collect positions already covered by an existing cursor's selection
+      const occupied = new Set<string>();
+      for (const c of cursors) {
+        const cSel = getSelRange(c);
+        if (cSel && cSel.start.y === cSel.end.y) {
+          occupied.add(`${cSel.start.x},${cSel.start.y}`);
+        }
+      }
+
+      const findFrom = (
+        startY: number,
+        startX: number,
+        stopY: number,
+        stopX: number,
+      ): Pos | null => {
+        for (let y = startY; y < lines.length; y++) {
+          const line = lines[y];
+          const fromX = y === startY ? startX : 0;
+          let idx = line.indexOf(needle, fromX);
+          while (idx !== -1) {
+            if (y > stopY || (y === stopY && idx >= stopX)) return null;
+            if (!occupied.has(`${idx},${y}`)) return { x: idx, y };
+            idx = line.indexOf(needle, idx + 1);
+          }
+          if (y >= stopY) return null;
+        }
+        return null;
+      };
+
+      // search after end of last selection, wrap to start
+      let found = findFrom(sel.end.y, sel.end.x, lines.length, 0);
+      if (!found) found = findFrom(0, 0, sel.start.y, sel.start.x);
+      if (!found) return false;
+
+      cursors.push({
+        x: found.x + needle.length,
+        y: found.y,
+        anchor: { x: found.x, y: found.y },
+      });
+      return true;
     },
   };
 
