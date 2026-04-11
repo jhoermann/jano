@@ -147,25 +147,59 @@ function makePasteKey(text: string): KeyEvent {
   };
 }
 
+let lastClickTime = 0;
+let lastClickX = -1;
+let lastClickY = -1;
+
 function handleMouse(event: MouseEvent) {
   const { viewH } = getViewDimensions(session.screen, session.editor.lines.length, session.plugin);
 
   if (event.type === "click") {
     const gw = gutterWidth(session.editor.lines.length);
     const contentTop = 1;
-    const editorY = event.y - contentTop + session.cm.scrollY;
-    const editorX = event.x - 1 - gw + session.cm.scrollX;
+    const editorY = Math.min(
+      event.y - contentTop + session.cm.scrollY,
+      session.editor.lines.length - 1,
+    );
+    const editorX = Math.min(
+      Math.max(0, event.x - 1 - gw + session.cm.scrollX),
+      session.editor.lines[editorY]?.length ?? 0,
+    );
 
-    if (event.y >= contentTop && event.y < contentTop + viewH && event.x > gw) {
-      session.cm.clearExtras();
-      session.cm.primary.anchor = null;
-      session.cm.primary.y = Math.min(editorY, session.editor.lines.length - 1);
-      session.cm.primary.x = Math.min(
-        Math.max(0, editorX),
-        session.editor.lines[session.cm.primary.y].length,
-      );
-      update();
+    if (event.y < contentTop || event.y >= contentTop + viewH || event.x <= gw) return;
+
+    const now = Date.now();
+    const isDoubleClick =
+      now - lastClickTime < 400 && lastClickX === editorX && lastClickY === editorY;
+    lastClickTime = now;
+    lastClickX = editorX;
+    lastClickY = editorY;
+
+    const p = session.cm.primary;
+    session.cm.clearExtras();
+
+    if (isDoubleClick) {
+      // select word at click position (no trailing whitespace)
+      const line = session.editor.lines[editorY];
+      const ch = line[editorX];
+      if (ch !== undefined) {
+        const isWord = /\w/.test(ch);
+        const pattern = isWord ? /\w/ : /[^\w\s]/;
+        let left = editorX;
+        while (left > 0 && pattern.test(line[left - 1])) left--;
+        let right = editorX;
+        while (right < line.length && pattern.test(line[right])) right++;
+        p.y = editorY;
+        p.anchor = { x: left, y: editorY };
+        p.x = right;
+      }
+    } else {
+      p.anchor = null;
+      p.y = editorY;
+      p.x = editorX;
     }
+
+    update();
     return;
   }
 
