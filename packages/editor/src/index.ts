@@ -150,6 +150,7 @@ function makePasteKey(text: string): KeyEvent {
 let lastClickTime = 0;
 let lastClickX = -1;
 let lastClickY = -1;
+let clickCount = 0;
 
 function handleMouse(event: MouseEvent) {
   const { viewH } = getViewDimensions(session.screen, session.editor.lines.length, session.plugin);
@@ -169,8 +170,12 @@ function handleMouse(event: MouseEvent) {
     if (event.y < contentTop || event.y >= contentTop + viewH || event.x <= gw) return;
 
     const now = Date.now();
-    const isDoubleClick =
-      now - lastClickTime < 400 && lastClickX === editorX && lastClickY === editorY;
+    const samePos = lastClickX === editorX && lastClickY === editorY;
+    if (now - lastClickTime < 400 && samePos) {
+      clickCount++;
+    } else {
+      clickCount = 1;
+    }
     lastClickTime = now;
     lastClickX = editorX;
     lastClickY = editorY;
@@ -178,8 +183,14 @@ function handleMouse(event: MouseEvent) {
     const p = session.cm.primary;
     session.cm.clearExtras();
 
-    if (isDoubleClick) {
-      // select word at click position (no trailing whitespace)
+    if (clickCount === 3) {
+      // triple-click: select entire line
+      p.y = editorY;
+      p.anchor = { x: 0, y: editorY };
+      p.x = session.editor.lines[editorY].length;
+      clickCount = 0;
+    } else if (clickCount === 2) {
+      // double-click: select word
       const line = session.editor.lines[editorY];
       const ch = line[editorX];
       if (ch !== undefined) {
@@ -194,6 +205,7 @@ function handleMouse(event: MouseEvent) {
         p.x = right;
       }
     } else {
+      // single click: position cursor
       p.anchor = null;
       p.y = editorY;
       p.x = editorX;
