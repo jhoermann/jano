@@ -329,7 +329,7 @@ export function parseKey(data: Buffer): KeyEvent {
 
 // ----- Shortcut Matching -----
 
-function keyToCombo(key: KeyEvent): string {
+export function keyToCombo(key: KeyEvent): string {
   const parts: string[] = [];
   if (key.ctrl) parts.push("ctrl");
   if (key.alt) parts.push("alt");
