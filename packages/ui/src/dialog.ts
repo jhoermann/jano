@@ -63,6 +63,19 @@ export function showDialog(
     }
 
     let backgroundDrawn = false;
+    const buttonHitAreas: { x: number; y: number; w: number; idx: number }[] = [];
+
+    function parseClick(data: Buffer): { x: number; y: number } | null {
+      if (data[0] !== 0x1b || data[1] !== 0x5b || data[2] !== 0x3c) return null;
+      const last = data[data.length - 1];
+      if (last !== 0x4d) return null; // only press, not release
+      const params = data.toString("utf8", 3, data.length - 1);
+      const parts = params.split(";");
+      if (parts.length !== 3) return null;
+      const button = parseInt(parts[0], 10);
+      if (button !== 0) return null; // only left click
+      return { x: parseInt(parts[1], 10) - 1, y: parseInt(parts[2], 10) - 1 };
+    }
 
     function renderDialog() {
       // only draw background once to avoid flicker
@@ -122,6 +135,7 @@ export function showDialog(
       }
 
       // buttons
+      buttonHitAreas.length = 0;
       if (buttons.length > 0) {
         row++;
         // each button: " Label " (label + 2 padding) + 2 gap between
@@ -136,6 +150,7 @@ export function showDialog(
             fg: isActive ? theme.buttonActiveFg : theme.buttonFg,
             bg: isActive ? theme.buttonActiveBg : theme.buttonBg,
           });
+          buttonHitAreas.push({ x: btnX, y: row, w: btnWidths[i], idx: i });
           btnX += btnWidths[i] + 2;
         }
       }
@@ -181,6 +196,23 @@ export function showDialog(
       if (data[0] === 9 && hasInput && buttons.length > 0) {
         buttonsActive = !buttonsActive;
         renderDialog();
+        return;
+      }
+
+      // mouse click on button
+      const click = parseClick(data);
+      if (click) {
+        for (const hit of buttonHitAreas) {
+          if (click.y === hit.y && click.x >= hit.x && click.x < hit.x + hit.w) {
+            cleanup();
+            resolve({
+              type: "button",
+              value: buttons[hit.idx].value,
+              inputValue: inputText,
+            });
+            return;
+          }
+        }
         return;
       }
 

@@ -10,5 +10,7 @@ export { drawList, listMoveUp, listMoveDown } from "./list.ts";
 export type { ListItem, ListOptions, ListState } from "./list.ts";
 export { drawToggle, TOGGLE_WIDTH } from "./toggle.ts";
 export type { ToggleOptions } from "./toggle.ts";
+export { drawPopup, popupMoveUp, popupMoveDown } from "./popup.ts";
+export type { PopupItem, PopupOptions } from "./popup.ts";
 export { showSearch } from "./search.ts";
 export type { SearchOptions, SearchResult, SearchMatch } from "./search.ts";
