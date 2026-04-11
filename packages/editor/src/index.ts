@@ -192,9 +192,21 @@ function acceptCompletion() {
     session.cm.saveState(),
   );
 
-  // replace the prefix with the completion
-  session.editor.lines[p.y] = line.substring(0, comp.startX) + text + line.substring(p.x);
-  p.x = comp.startX + text.length;
+  // replace the prefix with the completion (multi-line safe)
+  const before = line.substring(0, comp.startX);
+  const after = line.substring(p.x);
+  if (text.includes("\n")) {
+    const parts = text.split("\n");
+    session.editor.lines[p.y] = before + parts[0];
+    for (let i = 1; i < parts.length; i++) {
+      session.editor.lines.splice(p.y + i, 0, parts[i] + (i === parts.length - 1 ? after : ""));
+    }
+    p.y += parts.length - 1;
+    p.x = parts[parts.length - 1].length;
+  } else {
+    session.editor.lines[p.y] = before + text + after;
+    p.x = comp.startX + text.length;
+  }
   session.editor.dirty = true;
 
   session.undo.commit({ x: p.x, y: p.y }, session.editor.lines, session.cm.saveState());
@@ -292,8 +304,12 @@ function dispatch(key: KeyEvent) {
         renderView();
       }
     } else {
-      // no popup open — schedule auto-trigger after typing
-      scheduleAutoComplete();
+      // only auto-trigger after actual text input (printable char or backspace)
+      const isTyping =
+        (!key.ctrl && !key.alt && key.name.length === 1) ||
+        key.name === "backspace" ||
+        key.name === "tab";
+      if (isTyping) scheduleAutoComplete();
     }
   }
 }
