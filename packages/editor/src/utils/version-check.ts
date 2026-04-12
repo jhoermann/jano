@@ -38,10 +38,21 @@ export function compareVersions(a: string, b: string): number {
   return pa.pre.localeCompare(pb.pre, undefined, { numeric: true });
 }
 
+function isValidCache(v: unknown): v is CacheEntry {
+  if (!v || typeof v !== "object") return false;
+  const obj = v as Record<string, unknown>;
+  return (
+    typeof obj.checkedAt === "number" &&
+    typeof obj.latestVersion === "string" &&
+    obj.latestVersion.length > 0
+  );
+}
+
 function loadCache(): CacheEntry | null {
   try {
     if (!existsSync(CACHE_FILE)) return null;
-    return JSON.parse(readFileSync(CACHE_FILE, "utf8")) as CacheEntry;
+    const parsed: unknown = JSON.parse(readFileSync(CACHE_FILE, "utf8"));
+    return isValidCache(parsed) ? parsed : null;
   } catch {
     return null;
   }
@@ -62,7 +73,7 @@ function saveCache(entry: CacheEntry) {
  * Fails silently (offline, network error, etc.) - returns null.
  */
 export async function checkIfUpdateAvailable(): Promise<string | null> {
-  if (VERSION === "dev") return null;
+  if (VERSION === "dev") return "dev";
 
   const cache = loadCache();
   const now = Date.now();
@@ -79,12 +90,21 @@ export async function checkIfUpdateAvailable(): Promise<string | null> {
   try {
     const res = await fetch("https://registry.npmjs.org/@jano-editor/editor/latest");
     if (res.status !== 200) return null;
-    const pkg = (await res.json()) as NpmPackage;
+    const pkg: unknown = await res.json();
+    if (
+      !pkg ||
+      typeof pkg !== "object" ||
+      typeof (pkg as NpmPackage).version !== "string" ||
+      !(pkg as NpmPackage).version
+    ) {
+      return null;
+    }
+    const latestVersion = (pkg as NpmPackage).version;
 
-    saveCache({ checkedAt: now, latestVersion: pkg.version });
+    saveCache({ checkedAt: now, latestVersion });
 
-    if (compareVersions(VERSION, pkg.version) < 0) {
-      return pkg.version;
+    if (compareVersions(VERSION, latestVersion) < 0) {
+      return latestVersion;
     }
     return null;
   } catch {

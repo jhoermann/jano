@@ -348,9 +348,8 @@ editorLayer.on("shortcut", (event) => {
 });
 
 editorLayer.on("key", (key) => {
+  // alert intercepts ESC; onClose callback clears activeAlert and re-renders
   if (activeAlert && alertHandleKey(activeAlert, key.raw)) {
-    activeAlert = null;
-    update();
     return true;
   }
   dispatch(key);
@@ -369,9 +368,8 @@ editorLayer.on("paste", (event) => {
 });
 
 editorLayer.on("mouse:click", (event: MouseEvent) => {
+  // alert intercepts click on ✕; onClose callback clears activeAlert and re-renders
   if (activeAlert && alertHandleClick(activeAlert, event.x, event.y)) {
-    activeAlert = null;
-    update();
     return true;
   }
   stopAutoScroll();
@@ -555,10 +553,11 @@ async function start() {
   // async version check - shows a banner if a newer version is available
   void checkIfUpdateAvailable().then((latest) => {
     if (!latest) return;
+    const current = process.env.JANO_VERSION || "dev";
     activeAlert = createAlert(
       {
         type: "info",
-        message: `jano v${latest} available. Run 'jano update' to upgrade.`,
+        message: `jano v${current} → v${latest} available. Run 'jano update' to upgrade.`,
         position: "top",
         autoClose: 10000,
       },

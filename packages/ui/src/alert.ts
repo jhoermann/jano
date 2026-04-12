@@ -26,6 +26,7 @@ export interface AlertState {
   closed: boolean;
   closeHitArea: { x: number; y: number; w: number } | null;
   timer: ReturnType<typeof setTimeout> | null;
+  onClose: (() => void) | undefined;
 }
 
 const defaultColors: Record<AlertType, Required<AlertColors>> = {
@@ -59,8 +60,10 @@ const icons: Record<AlertType, string> = {
 };
 
 /**
- * Creates an alert. If autoClose is set, starts a timer that calls onClose after the given ms.
- * The caller should use onClose to clear its reference to the state and trigger a re-render.
+ * Creates an alert. If autoClose is set, starts a timer that closes it after the given ms.
+ * onClose is called exactly once, regardless of whether the alert is dismissed manually
+ * (ESC / click ✕ / closeAlert) or via auto-close. The caller should use onClose to clear
+ * its reference to the state and trigger a re-render.
  */
 export function createAlert(opts: AlertOptions, onClose?: () => void): AlertState {
   const state: AlertState = {
@@ -69,14 +72,10 @@ export function createAlert(opts: AlertOptions, onClose?: () => void): AlertStat
     closed: false,
     closeHitArea: null,
     timer: null,
+    onClose,
   };
   if (opts.autoClose && opts.autoClose > 0) {
-    state.timer = setTimeout(() => {
-      if (state.closed) return;
-      state.closed = true;
-      state.timer = null;
-      onClose?.();
-    }, opts.autoClose);
+    state.timer = setTimeout(() => closeAlert(state), opts.autoClose);
   }
   return state;
 }
@@ -153,4 +152,7 @@ export function closeAlert(state: AlertState): void {
     clearTimeout(state.timer);
     state.timer = null;
   }
+  const cb = state.onClose;
+  state.onClose = undefined; // prevent double-call
+  cb?.();
 }

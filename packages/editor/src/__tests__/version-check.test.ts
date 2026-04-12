@@ -1,5 +1,12 @@
 import { describe, it, expect } from "bun:test";
-import { compareVersions } from "../utils/version-check.ts";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+// isolate cache dir before importing version-check (which transitively imports config)
+process.env.JANO_HOME = mkdtempSync(join(tmpdir(), "jano-vc-test-"));
+
+const { compareVersions } = await import("../utils/version-check.ts");
 
 describe("compareVersions", () => {
   it("compares equal versions as 0", () => {
