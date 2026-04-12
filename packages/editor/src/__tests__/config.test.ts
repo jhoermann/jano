@@ -3,15 +3,17 @@ import { mkdtempSync, rmSync, writeFileSync, existsSync, unlinkSync } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-// Set JANO_HOME BEFORE importing the module — paths are captured at import time
+// Set JANO_HOME BEFORE importing the module — paths are captured at import time.
+// Note: if another test imports config.ts first, its JANO_HOME wins. We use the
+// actually-resolved path via getPaths() to stay robust against test ordering.
 const tmp = mkdtempSync(join(tmpdir(), "jano-test-"));
 const originalHome = process.env.JANO_HOME;
 process.env.JANO_HOME = tmp;
 
 // Now import after env is set
-const { loadConfig, saveConfig } = await import("../plugins/config.ts");
+const { loadConfig, saveConfig, getPaths } = await import("../plugins/config.ts");
 
-const configPath = join(tmp, "config.json");
+const configPath = join(getPaths().config, "config.json");
 
 beforeAll(() => {
   // ensure tmp dir exists (mkdtempSync already does that)
