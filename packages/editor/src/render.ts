@@ -118,7 +118,7 @@ export function render(
   draw.text(titleX, 0, title, { fg: [230, 200, 100] });
 
   // DEBUG badge (left side of title bar) when running in debug mode
-  if (process.env.JANO_DEBUG) {
+  if (process.env.JANO_DEBUG === "1") {
     const badge = " DEBUG ";
     draw.text(2, 0, badge, { fg: [255, 255, 255], bg: [200, 40, 40] });
   }

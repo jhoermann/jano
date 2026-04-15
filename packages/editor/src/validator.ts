@@ -57,6 +57,7 @@ export function createValidator(plugin: LanguagePlugin | null, onDone?: () => vo
             action: "validator_run_failed",
             plugin: plugin.name,
             error: err instanceof Error ? err.message : String(err),
+            stack: err instanceof Error ? err.stack : undefined,
           });
         }
         onDone?.();

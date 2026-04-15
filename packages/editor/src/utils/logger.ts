@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { existsSync, unlinkSync } from "node:fs";
 import { getCacheDir } from "../plugins/config.ts";
 
-export const isDebug = !!process.env.JANO_DEBUG;
+export const isDebug = process.env.JANO_DEBUG === "1";
 
 const LOG_FILE_NAME = "debug.log";
 let initialized = false;
@@ -68,15 +68,26 @@ export function initDebugLogger(): void {
     drain: activeDrain,
   });
 
-  // flush on exit paths
-  const flushAndExit = () => {
+  // flush on normal exit (node drains its event loop)
+  process.once("beforeExit", () => {
+    if (activeDrain) void activeDrain.flush();
+  });
+
+  // flush on SIGINT / SIGTERM, then re-raise so the process terminates.
+  // installing a handler replaces the default (exit) behavior, so we must
+  // explicitly kill ourselves after the flush has a chance to run.
+  const handleSignal = (signal: "SIGINT" | "SIGTERM") => {
+    const finish = () => {
+      process.kill(process.pid, signal);
+    };
     if (activeDrain) {
-      void activeDrain.flush();
+      activeDrain.flush().then(finish, finish);
+    } else {
+      finish();
     }
   };
-  process.once("beforeExit", flushAndExit);
-  process.once("SIGINT", flushAndExit);
-  process.once("SIGTERM", flushAndExit);
+  process.once("SIGINT", () => handleSignal("SIGINT"));
+  process.once("SIGTERM", () => handleSignal("SIGTERM"));
 }
 
 /** Flush any pending log events. Call before a controlled process.exit(). */
