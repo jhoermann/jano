@@ -1,64 +1,83 @@
 # @jano-editor/editor
 
-The core package of [jano](https://janoeditor.dev) - a modern terminal editor with plugin support.
+A modern terminal editor with plugin support. nano simplicity, VS Code power, zero bloat.
+
+Website: [janoeditor.dev](https://janoeditor.dev) · Repo: [jano-editor/jano](https://github.com/jano-editor/jano)
+
+---
+
+## Why jano?
+
+- **Shortcuts you already know** — Ctrl+S, Ctrl+Z, Ctrl+C/V, Ctrl+A. No modes, no `.vimrc`.
+- **Multi-cursor that actually works** — Ctrl+Shift+Up/Down to stack, Ctrl+D for next occurrence, autocomplete inserts at every cursor.
+- **Full mouse support** — click, double/triple-click, drag-select, scroll, auto-scroll at edges.
+- **Autocomplete with popup** — plugin-driven completions + buffer words.
+- **Inline validation** — errors and warnings from plugins appear right next to the line, F4 for details.
+- **Auto-formatting** — F3 runs the active plugin's formatter on the whole document.
+- **Plugin store** — `jano plugin install yaml`, browse at [janoeditor.dev/plugins](https://janoeditor.dev/plugins).
+- **Zero bloat** — ~59KB JS bundle, starts instantly, smooth scrolling at 60,000+ lines.
+- **100% JavaScript** — no native addons, no compile steps. If you can read JS, you can extend jano.
 
 ## Install
+
+**Linux / macOS**
+
+```bash
+curl -fsSL https://janoeditor.dev/install.sh | bash
+```
+
+**Windows (PowerShell)**
+
+```powershell
+irm https://janoeditor.dev/install.ps1 | iex
+```
+
+**npm**
 
 ```bash
 npm install -g @jano-editor/editor
 ```
 
-Or use the install scripts from [janoeditor.dev](https://janoeditor.dev).
-
 ## Usage
 
 ```bash
-# open a file
-jano myfile.yaml
+jano myfile.yaml          # open a file
+jano                      # new file
+jano --debug myfile.yaml  # debug mode (logs to ~/.cache/jano/logs/)
 
-# new file
-jano
-
-# manage plugins
-jano plugin install yaml
-jano plugin list
-jano plugin remove yaml
-jano plugin search
-
-# check for updates
-jano update
-
-# debug mode
-jano myfile.yaml --debug
+jano plugin install yaml  # install a plugin
+jano plugin list          # list installed plugins
+jano plugin search        # browse the store
+jano update               # check for updates
 ```
 
-## What's inside
+## Shortcuts (most useful)
 
-- File editing with undo/redo, clipboard, selections
-- Multi-cursor editing (Ctrl+Shift+Up/Down)
-- Search & Replace (Ctrl+F)
-- Go to Line (Ctrl+G)
-- Plugin loader with XDG-compliant paths
-- Syntax highlighting, formatting, validation (via plugins)
-- Inline diagnostics display
-- Help dialog (F1), History browser (F2)
-- Cross-platform: Linux, macOS, Windows, WSL
-- 59KB built, zero lag with 60k+ lines
+| Shortcut                 | Action                   |
+| ------------------------ | ------------------------ |
+| Ctrl+S                   | Save                     |
+| Ctrl+Z / Ctrl+Y          | Undo / Redo              |
+| Ctrl+X / Ctrl+C / Ctrl+V | Cut / Copy / Paste       |
+| Ctrl+F                   | Search & Replace         |
+| Ctrl+G                   | Go to Line               |
+| Ctrl+D                   | Select Next Occurrence   |
+| Ctrl+Shift+Up/Down       | Add Cursor Above / Below |
+| Ctrl+Space               | Trigger Autocomplete     |
+| F1                       | Help                     |
+| F3                       | Format (plugin)          |
+| F4                       | Diagnostics              |
+| F9                       | Settings                 |
 
-## Plugin System
+Press F1 inside the editor for the full list.
 
-Plugins are loaded from `~/.local/share/jano/plugins/` (Linux/macOS) or `%LOCALAPPDATA%/jano/plugins/` (Windows).
+## Plugins
 
-Each plugin is a directory with a `plugin.json` manifest and an `index.js` entry file.
+Plugins add syntax highlighting, formatting, validation, and completions for any file format. A plugin is a single TypeScript file — if you can write a regex, you can build one.
 
-Install plugins from the [Plugin Store](https://janoeditor.dev/plugins):
+Ready-made plugins: **YAML, JSON, Markdown, Shell, Dockerfile**.
 
-```bash
-jano plugin install yaml
-```
-
-Or build your own - see the [docs](https://janoeditor.dev/docs).
+Build your own: see the [docs](https://janoeditor.dev/docs) or check out [plugin-yaml](https://github.com/jano-editor/plugin-yaml) as a reference.
 
 ## License
 
-[MIT](../../LICENSE)
+[MIT](https://github.com/jano-editor/jano/blob/main/LICENSE)
