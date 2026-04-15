@@ -42,11 +42,15 @@ npm install -g @jano-editor/editor
 - **Familiar shortcuts** - Ctrl+S, Ctrl+Z, Ctrl+C/V, Ctrl+A - no learning curve
 - **Syntax highlighting** - via plugins for YAML, JSON, Markdown, Shell, Dockerfile and more
 - **Auto-formatting** - press F3 to format the entire document
+- **Autocomplete** - plugin-driven completions plus buffer words, works with multi-cursor
 - **Inline validation** - errors and warnings shown directly in the editor (F4 for details)
-- **Multi-cursor editing** - Ctrl+Shift+Up/Down to add cursors, edit multiple lines at once
+- **Multi-cursor editing** - Ctrl+Shift+Up/Down to stack cursors, Ctrl+D for next occurrence
+- **Mouse support** - click, double/triple-click to select, drag, scroll, auto-scroll at edges
 - **Search & Replace** - Ctrl+F with live results
+- **Settings dialog** - F9 for tab size, line numbers, autocomplete toggle
+- **Structured debug logs** - `--debug` writes JSON events to `~/.cache/jano/logs/` for easy bug diagnosis
 - **Plugin system** - install plugins from the [Plugin Store](https://janoeditor.dev/plugins)
-- **60,000+ lines** - no lag, 59KB binary, starts instantly
+- **60,000+ lines** - no lag, ~59KB JS bundle, starts instantly
 - **Cross-platform** - Linux, macOS, Windows, WSL
 
 ## Usage
@@ -70,21 +74,24 @@ jano update
 
 ## Shortcuts
 
-| Shortcut                 | Action             |
-| ------------------------ | ------------------ |
-| Ctrl+S                   | Save               |
-| Ctrl+Q                   | Exit               |
-| Ctrl+Z / Ctrl+Y          | Undo / Redo        |
-| Ctrl+X / Ctrl+C / Ctrl+V | Cut / Copy / Paste |
-| Ctrl+A                   | Select All         |
-| Ctrl+F                   | Search & Replace   |
-| Ctrl+G                   | Go to Line         |
-| Ctrl+Shift+Up/Down       | Multi-Cursor       |
-| Alt+Up/Down              | Move Line          |
-| F1                       | Help               |
-| F2                       | History Browser    |
-| F3                       | Format (plugin)    |
-| F4                       | Diagnostics        |
+| Shortcut                 | Action                   |
+| ------------------------ | ------------------------ |
+| Ctrl+S                   | Save                     |
+| Ctrl+Q                   | Exit                     |
+| Ctrl+Z / Ctrl+Y          | Undo / Redo              |
+| Ctrl+X / Ctrl+C / Ctrl+V | Cut / Copy / Paste       |
+| Ctrl+A                   | Select All               |
+| Ctrl+F                   | Search & Replace         |
+| Ctrl+G                   | Go to Line               |
+| Ctrl+D                   | Select Next Occurrence   |
+| Ctrl+Shift+Up/Down       | Add Cursor Above / Below |
+| Ctrl+Space               | Trigger Autocomplete     |
+| Alt+Up/Down              | Move Line                |
+| F1                       | Help                     |
+| F2                       | History Browser          |
+| F3                       | Format (plugin)          |
+| F4                       | Diagnostics              |
+| F9                       | Settings                 |
 
 ## Plugins
 
