@@ -252,8 +252,13 @@ export function render(
   // right: git, diagnostics & multi-cursor
   const rightItems: { text: string; fg: RGB }[] = [];
   if (gitInfo) {
+    const maxBranchLen = 25;
+    const branch =
+      gitInfo.branch.length > maxBranchLen
+        ? gitInfo.branch.substring(0, maxBranchLen - 1) + "…"
+        : gitInfo.branch;
     let gitLabel = gitInfo.worktree ? `⊙ ${gitInfo.worktree} ` : "";
-    gitLabel += `⎇ ${gitInfo.branch}`;
+    gitLabel += `⎇ ${branch}`;
     rightItems.push({ text: gitLabel, fg: [100, 180, 220] });
   }
   if (diagnostics && diagnostics.length > 0) {
