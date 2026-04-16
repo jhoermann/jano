@@ -1,24 +1,30 @@
-import { execSync } from "node:child_process";
+import { exec as execCb } from "node:child_process";
 import { dirname, basename } from "node:path";
+import { log } from "./utils/logger.ts";
 
 export interface GitInfo {
   branch: string;
   worktree?: string;
 }
 
-function git(args: string, cwd: string): string {
-  return execSync(`git ${args}`, { cwd, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }).trim();
+function git(args: string, cwd: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execCb(`git ${args}`, { cwd, encoding: "utf8", timeout: 3000 }, (err, stdout) => {
+      if (err) reject(err);
+      else resolve(stdout.trim());
+    });
+  });
 }
 
-function isInsideWorkTree(cwd: string): boolean {
-  return git("rev-parse --is-inside-work-tree", cwd) === "true";
+async function isInsideWorkTree(cwd: string): Promise<boolean> {
+  return (await git("rev-parse --is-inside-work-tree", cwd)) === "true";
 }
 
-function getBranch(cwd: string): string {
+async function getBranch(cwd: string): Promise<string> {
   return git("rev-parse --abbrev-ref HEAD", cwd);
 }
 
-function getToplevel(cwd: string): string {
+async function getToplevel(cwd: string): Promise<string> {
   return git("rev-parse --show-toplevel", cwd);
 }
 
@@ -28,9 +34,9 @@ function parseMainWorktreePath(porcelain: string): string | undefined {
   return worktreeLine?.slice("worktree ".length);
 }
 
-function detectWorktree(cwd: string, toplevel: string): string | undefined {
+async function detectWorktree(cwd: string, toplevel: string): Promise<string | undefined> {
   try {
-    const raw = git("worktree list --porcelain", cwd);
+    const raw = await git("worktree list --porcelain", cwd);
     const mainRoot = parseMainWorktreePath(raw);
     if (mainRoot && toplevel !== mainRoot) {
       return basename(toplevel);
@@ -40,15 +46,20 @@ function detectWorktree(cwd: string, toplevel: string): string | undefined {
   }
 }
 
-export function getGitInfo(filePath?: string): GitInfo | null {
+export async function getGitInfo(filePath?: string): Promise<GitInfo | null> {
   const cwd = filePath ? dirname(filePath) : process.cwd();
   try {
-    if (!isInsideWorkTree(cwd)) return null;
-    const branch = getBranch(cwd);
-    const toplevel = getToplevel(cwd);
-    const worktree = detectWorktree(cwd, toplevel);
+    if (!(await isInsideWorkTree(cwd))) return null;
+    const branch = await getBranch(cwd);
+    const toplevel = await getToplevel(cwd);
+    const worktree = await detectWorktree(cwd, toplevel);
+    log.debug({ action: "git_info", branch, worktree: worktree ?? null });
     return { branch, worktree };
-  } catch {
+  } catch (err) {
+    log.debug({
+      action: "git_info_unavailable",
+      reason: err instanceof Error ? err.message : String(err),
+    });
     return null;
   }
 }
